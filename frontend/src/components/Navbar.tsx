@@ -8,6 +8,7 @@ const ADMIN_LINKS = [
   { to: '/admin/matches',     label: 'Matches' },
   { to: '/admin/predictions', label: 'Predictions' },
   { to: '/admin/members',     label: 'Members' },
+  { to: '/admin/highlights',  label: 'Highlights' },
 ]
 
 export function Navbar() {

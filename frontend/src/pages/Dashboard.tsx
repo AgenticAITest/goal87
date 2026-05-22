@@ -14,10 +14,18 @@ interface TournamentCard {
   myRank:      number | null
 }
 
+interface Clip { id: string; video_id: string; label: string | null }
+
+function pickRandom<T>(arr: T[], n: number): T[] {
+  const copy = [...arr].sort(() => Math.random() - 0.5)
+  return copy.slice(0, n)
+}
+
 export function Dashboard() {
   const { profile } = useAuth()
   const navigate    = useNavigate()
   const [cards,   setCards]   = useState<TournamentCard[]>([])
+  const [clips,   setClips]   = useState<Clip[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -28,10 +36,12 @@ export function Dashboard() {
 
   async function load() {
     setLoading(true)
-    const { data: tournaments } = await supabase
-      .from('tournaments')
-      .select('*')
-      .order('created_at', { ascending: false })
+
+    const [{ data: tournaments }, { data: allClips }] = await Promise.all([
+      supabase.from('tournaments').select('*').order('created_at', { ascending: false }),
+      supabase.from('highlight_clips').select('id,video_id,label'),
+    ])
+    setClips(pickRandom((allClips ?? []) as Clip[], 3))
 
     const list = tournaments ?? []
 
@@ -56,6 +66,38 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-charcoal">
       <Navbar />
+
+      {/* Highlight clips — full-bleed strip above the page content */}
+      {clips.length > 0 && (
+        <div className="w-full px-6 pt-6 pb-2">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex gap-4 justify-center">
+              {clips.map((clip) => (
+                <div
+                  key={clip.id}
+                  className="relative w-48 shrink-0 overflow-hidden rounded-2xl bg-black shadow-2xl"
+                  style={{ aspectRatio: '9/16' }}
+                >
+                  <iframe
+                    src={`https://www.youtube.com/embed/${clip.video_id}?autoplay=1&mute=1&loop=1&playlist=${clip.video_id}&controls=0&rel=0&modestbranding=1&playsinline=1`}
+                    className="absolute inset-0 w-full h-full"
+                    allow="autoplay; encrypted-media; gyroscope"
+                    title={clip.label ?? 'Highlight'}
+                  />
+                  {/* Block all clicks / interaction */}
+                  <div className="absolute inset-0 z-10" />
+                  {clip.label && (
+                    <div className="absolute bottom-0 inset-x-0 z-20 bg-gradient-to-t from-black/80 to-transparent px-3 py-3 pointer-events-none">
+                      <p className="text-white text-xs font-medium truncate">{clip.label}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
 
         <div>

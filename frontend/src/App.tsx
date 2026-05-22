@@ -9,6 +9,7 @@ import { AdminMembers } from './pages/admin/Members'
 import { AdminTournaments } from './pages/admin/Tournaments'
 import { AdminMatches } from './pages/admin/Matches'
 import { AdminPredictions } from './pages/admin/Predictions'
+import { AdminHighlights } from './pages/admin/Highlights'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/admin/tournaments" element={<AdminTournaments />} />
             <Route path="/admin/matches" element={<AdminMatches />} />
             <Route path="/admin/predictions" element={<AdminPredictions />} />
+            <Route path="/admin/highlights" element={<AdminHighlights />} />
           </Route>
         </Route>
 

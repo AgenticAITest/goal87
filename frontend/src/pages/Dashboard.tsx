@@ -73,77 +73,74 @@ export function Dashboard() {
               <div
                 key={t.id}
                 onClick={() => navigate(`/tournaments/${t.id}/summary`)}
-                className="glass rounded-2xl border border-transparent hover:border-gold/30 transition-all cursor-pointer group"
+                className="glass rounded-2xl border border-transparent hover:border-gold/30 transition-all cursor-pointer group p-5 space-y-4"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center">
-
-                  {/* Left: tournament info */}
-                  <div className="flex-1 p-5 flex flex-col gap-4">
-                    <div>
-                      <h2 className="text-white font-semibold group-hover:text-gold transition-colors leading-tight">
-                        {t.name}
-                      </h2>
-                      <p className="text-gray-500 text-xs mt-0.5">{formatIDR(t.stake_idr)} / match</p>
-                    </div>
-
-                    {myBalance != null && myRank != null ? (
-                      <div className="flex items-end gap-5">
-                        <div>
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">My balance</p>
-                          <p className={`text-xl font-bold ${myBalance > 0 ? 'text-green-400' : myBalance < 0 ? 'text-red-400' : 'text-gray-400'}`}>
-                            {myBalance > 0 ? '+' : ''}{formatIDR(myBalance)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">Rank</p>
-                          <p className="text-xl font-bold text-white">#{myRank}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-gray-600 text-xs italic">No predictions yet</p>
-                    )}
-
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 text-gold text-xs font-bold uppercase tracking-widest group-hover:text-gold-light transition-colors">
-                        Full summary <ChevronRight size={12} />
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/tournaments/${t.id}`) }}
-                        className="flex items-center gap-1 text-gray-500 hover:text-white text-xs uppercase tracking-widest transition-colors"
-                      >
-                        <ListChecks size={11} /> Predict
-                      </button>
-                    </div>
+                {/* Row 1: title + my stats */}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-white font-semibold group-hover:text-gold transition-colors leading-tight">
+                      {t.name}
+                    </h2>
+                    <p className="text-gray-500 text-xs mt-0.5">{formatIDR(t.stake_idr)} / match</p>
                   </div>
 
-                  {/* Right: mini leaderboard */}
-                  {leaderboard.length > 0 && (
-                    <div className="sm:w-56 border-t sm:border-t-0 sm:border-l border-white/5 p-4 flex flex-col justify-center space-y-1">
-                      <p className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mb-2">Standings</p>
-                      {leaderboard.map((row, i) => {
-                        const isMe = row.user_id === profile?.id
-                        return (
-                          <div
-                            key={row.user_id}
-                            className={`flex items-center gap-2 px-2 py-1 rounded-lg text-xs ${isMe ? 'bg-gold/10' : ''}`}
-                          >
-                            <span className={`w-4 text-right shrink-0 font-bold ${isMe ? 'text-gold' : 'text-gray-600'}`}>
-                              {i + 1}
-                            </span>
-                            <span className={`flex-1 truncate font-medium ${isMe ? 'text-gold' : 'text-gray-300'}`}>
-                              {row.display_name.split(' ')[0]}
-                            </span>
-                            <span className={`shrink-0 font-bold tabular-nums ${
-                              row.balance_idr > 0 ? 'text-green-400' :
-                              row.balance_idr < 0 ? 'text-red-400'   : 'text-gray-500'
-                            }`}>
-                              {row.balance_idr > 0 ? '+' : ''}{formatIDR(row.balance_idr)}
-                            </span>
-                          </div>
-                        )
-                      })}
+                  {myBalance != null && myRank != null ? (
+                    <div className="flex items-end gap-5 shrink-0">
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">My balance</p>
+                        <p className={`text-lg font-bold ${myBalance > 0 ? 'text-green-400' : myBalance < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                          {myBalance > 0 ? '+' : ''}{formatIDR(myBalance)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">Rank</p>
+                        <p className="text-lg font-bold text-white">#{myRank}</p>
+                      </div>
                     </div>
+                  ) : (
+                    <p className="text-gray-600 text-xs italic shrink-0">No predictions yet</p>
                   )}
+                </div>
+
+                {/* Row 2: standings grid */}
+                {leaderboard.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 border-t border-white/5 pt-3">
+                    {leaderboard.map((row, i) => {
+                      const isMe = row.user_id === profile?.id
+                      return (
+                        <div
+                          key={row.user_id}
+                          className={`flex items-center gap-2 px-2 py-1 rounded-lg ${isMe ? 'bg-gold/10' : ''}`}
+                        >
+                          <span className={`text-[10px] font-bold shrink-0 ${isMe ? 'text-gold' : 'text-gray-600'}`}>
+                            {i + 1}
+                          </span>
+                          <span className={`flex-1 truncate text-xs font-medium ${isMe ? 'text-gold' : 'text-gray-300'}`}>
+                            {row.display_name.split(' ')[0]}
+                          </span>
+                          <span className={`text-xs font-bold tabular-nums shrink-0 ${
+                            row.balance_idr > 0 ? 'text-green-400' :
+                            row.balance_idr < 0 ? 'text-red-400'   : 'text-gray-500'
+                          }`}>
+                            {row.balance_idr > 0 ? '+' : ''}{formatIDR(row.balance_idr)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Row 3: actions */}
+                <div className="flex items-center gap-3 border-t border-white/5 pt-3">
+                  <div className="flex items-center gap-1 text-gold text-xs font-bold uppercase tracking-widest group-hover:text-gold-light transition-colors">
+                    Full summary <ChevronRight size={12} />
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate(`/tournaments/${t.id}`) }}
+                    className="flex items-center gap-1 text-gray-500 hover:text-white text-xs uppercase tracking-widest transition-colors"
+                  >
+                    <ListChecks size={11} /> Predict
+                  </button>
                 </div>
               </div>
             ))}

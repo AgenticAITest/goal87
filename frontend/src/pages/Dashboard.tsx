@@ -75,10 +75,10 @@ export function Dashboard() {
                 onClick={() => navigate(`/tournaments/${t.id}/summary`)}
                 className="glass rounded-2xl border border-transparent hover:border-gold/30 transition-all cursor-pointer group"
               >
-                <div className="flex flex-col sm:flex-row">
+                <div className="flex flex-col sm:flex-row sm:items-center">
 
                   {/* Left: tournament info */}
-                  <div className="flex-1 p-5 flex flex-col justify-between gap-4">
+                  <div className="flex-1 p-5 flex flex-col gap-4">
                     <div>
                       <h2 className="text-white font-semibold group-hover:text-gold transition-colors leading-tight">
                         {t.name}

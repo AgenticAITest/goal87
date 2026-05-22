@@ -244,8 +244,8 @@ export function AdminTournaments() {
             {([
               { label: 'Name',                key: 'name',      type: 'text',   placeholder: 'e.g. Premier League 25/26' },
               { label: 'Stake per match (IDR)', key: 'stake_idr', type: 'number', placeholder: '100000' },
-              { label: 'Start date',           key: 'start_at',  type: 'date' },
-              { label: 'End date',             key: 'end_at',    type: 'date' },
+              { label: 'Start date',           key: 'start_at',  type: 'date',   placeholder: '' },
+              { label: 'End date',             key: 'end_at',    type: 'date',   placeholder: '' },
             ] as const).map(({ label, key, type, placeholder }) => (
               <div key={key} className="space-y-1">
                 <label className="text-xs text-gray-400 uppercase tracking-widest">{label}</label>

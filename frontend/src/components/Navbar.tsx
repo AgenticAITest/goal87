@@ -22,9 +22,13 @@ export function Navbar() {
 
   return (
     <nav className="border-b border-white/10 bg-charcoal/80 backdrop-blur-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-6">
-        <Link to="/" className="font-serif text-gold text-lg font-bold tracking-wide gold-glow shrink-0">
-          Pildun
+      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-6">
+        <Link to="/" className="shrink-0">
+          <img
+            src="/logo.png"
+            alt="TOP87 Bola"
+            className="h-14 w-14 rounded-full object-cover"
+          />
         </Link>
 
         {profile?.is_admin && (

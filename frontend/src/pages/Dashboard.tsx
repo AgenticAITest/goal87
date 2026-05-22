@@ -78,7 +78,7 @@ export function Dashboard() {
                 <div className="flex flex-col sm:flex-row">
 
                   {/* Left: tournament info */}
-                  <div className="flex-1 p-5 space-y-4">
+                  <div className="flex-1 p-5 flex flex-col justify-between gap-4">
                     <div>
                       <h2 className="text-white font-semibold group-hover:text-gold transition-colors leading-tight">
                         {t.name}

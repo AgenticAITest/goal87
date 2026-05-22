@@ -1,0 +1,6 @@
+-- Run this once after the first admin signs in with Google.
+-- Replace the email address with the actual admin account.
+--
+--   UPDATE profiles
+--     SET is_admin = true, status = 'active'
+--   WHERE email = 'chibib.bibieb@gmail.com';

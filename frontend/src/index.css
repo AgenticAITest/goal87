@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-charcoal:   #111111;
+  --color-navy:       #0A192F;
+  --color-gold:       #D4AF37;
+  --color-gold-light: #F9E27D;
+  --font-serif: "Playfair Display", serif;
+  --font-sans:  "Inter", sans-serif;
+}
+
+.glass      { @apply bg-white/5 backdrop-blur-md border border-white/10; }
+.glass-gold { @apply bg-gold/5  backdrop-blur-md border border-gold/20; }
+.gold-glow  { text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }

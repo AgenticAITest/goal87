@@ -1,0 +1,42 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_WORKER_URL: ${VITE_WORKER_URL:-https://goal.top87.id/api/worker}
+    restart: always
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pildun-frontend.rule=Host(`goal.top87.id`) && !PathPrefix(`/api/worker`)"
+      - "traefik.http.routers.pildun-frontend.entrypoints=websecure"
+      - "traefik.http.routers.pildun-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.pildun-frontend.loadbalancer.server.port=80"
+
+  score-worker:
+    build:
+      context: ./worker
+    restart: always
+    env_file: .env
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pildun-worker.rule=Host(`goal.top87.id`) && PathPrefix(`/api/worker`)"
+      - "traefik.http.routers.pildun-worker.entrypoints=websecure"
+      - "traefik.http.routers.pildun-worker.tls.certresolver=letsencrypt"
+      - "traefik.http.services.pildun-worker.loadbalancer.server.port=3001"
+      - "traefik.http.middlewares.pildun-worker-strip.stripprefix.prefixes=/api/worker"
+      - "traefik.http.routers.pildun-worker.middlewares=pildun-worker-strip"
+
+networks:
+  proxy:
+    external: true
+    # Must match the Traefik network name on this VPS.
+    # Check with: docker network ls | grep -i traefik
+    # Common names: proxy, traefik, web — update the name field below if needed.
+    name: proxy

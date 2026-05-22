@@ -1,0 +1,179 @@
+import { useEffect, useState } from 'react'
+import { CheckCircle, XCircle, Trash2 } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
+import { Navbar } from '../../components/Navbar'
+import type { MemberStatus, Profile } from '../../types/database'
+
+type Filter = 'all' | MemberStatus
+
+const STATUS_STYLES: Record<MemberStatus, string> = {
+  pending:   'text-yellow-400 bg-yellow-400/10',
+  active:    'text-green-400 bg-green-500/10',
+  suspended: 'text-orange-400 bg-orange-400/10',
+}
+
+export function AdminMembers() {
+  const [members, setMembers] = useState<Profile[]>([])
+  const [filter, setFilter] = useState<Filter>('all')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState<string | null>(null)  // id of member being acted on
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) setError(error.message)
+    else setMembers(data ?? [])
+    setLoading(false)
+  }
+
+  async function updateStatus(id: string, newStatus: MemberStatus) {
+    setBusy(id)
+    setError(null)
+    const { error } = await supabase.rpc('admin_update_member_status', {
+      p_target_id: id,
+      p_new_status: newStatus,
+    })
+    if (error) setError(error.message)
+    else setMembers((prev) => prev.map((m) => m.id === id ? { ...m, status: newStatus } : m))
+    setBusy(null)
+  }
+
+  async function deleteMember(id: string, name: string) {
+    if (!confirm(`Permanently delete ${name}? This cannot be undone.`)) return
+    setBusy(id)
+    setError(null)
+    const { error } = await supabase.rpc('admin_delete_member', { p_target_id: id })
+    if (error) setError(error.message)
+    else setMembers((prev) => prev.filter((m) => m.id !== id))
+    setBusy(null)
+  }
+
+  const visible = filter === 'all' ? members : members.filter((m) => m.status === filter)
+  const counts = {
+    all: members.length,
+    pending:   members.filter((m) => m.status === 'pending').length,
+    active:    members.filter((m) => m.status === 'active').length,
+    suspended: members.filter((m) => m.status === 'suspended').length,
+  }
+
+  const filters: { key: Filter; label: string }[] = [
+    { key: 'all',       label: `All (${counts.all})` },
+    { key: 'pending',   label: `Pending (${counts.pending})` },
+    { key: 'active',    label: `Active (${counts.active})` },
+    { key: 'suspended', label: `Suspended (${counts.suspended})` },
+  ]
+
+  return (
+    <div className="min-h-screen bg-charcoal">
+      <Navbar />
+
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        <div>
+          <p className="text-xs text-gold uppercase tracking-[0.3em]">Admin</p>
+          <h1 className="font-serif text-3xl font-bold text-white mt-1">Members</h1>
+        </div>
+
+        {/* Filter bar */}
+        <div className="flex flex-wrap gap-2">
+          {filters.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-widest font-bold transition-colors ${
+                filter === key
+                  ? 'bg-gold text-charcoal'
+                  : 'glass text-gray-400 hover:text-white'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {error && (
+          <div className="glass rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>
+        )}
+
+        {/* Member list */}
+        {loading ? (
+          <p className="text-gray-500 text-sm">Loading…</p>
+        ) : visible.length === 0 ? (
+          <p className="text-gray-500 text-sm">No members in this category.</p>
+        ) : (
+          <div className="space-y-3">
+            {visible.map((member) => (
+              <div
+                key={member.id}
+                className="glass rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-4 min-w-0">
+                  {/* Avatar */}
+                  <div className="w-9 h-9 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold text-sm shrink-0">
+                    {member.display_name.charAt(0).toUpperCase() || '?'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white font-medium text-sm truncate">{member.display_name}</p>
+                    <p className="text-gray-500 text-xs truncate">{member.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  {/* Status badge */}
+                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-widest font-bold ${STATUS_STYLES[member.status]}`}>
+                    {member.status}
+                  </span>
+
+                  {/* Actions */}
+                  {member.status === 'pending' && (
+                    <button
+                      onClick={() => updateStatus(member.id, 'active')}
+                      disabled={busy === member.id}
+                      className="text-green-400 hover:text-green-300 disabled:opacity-40 transition-colors"
+                      title="Approve"
+                    >
+                      <CheckCircle size={18} />
+                    </button>
+                  )}
+                  {member.status === 'active' && (
+                    <button
+                      onClick={() => updateStatus(member.id, 'suspended')}
+                      disabled={busy === member.id}
+                      className="text-orange-400 hover:text-orange-300 disabled:opacity-40 transition-colors"
+                      title="Suspend"
+                    >
+                      <XCircle size={18} />
+                    </button>
+                  )}
+                  {member.status === 'suspended' && (
+                    <button
+                      onClick={() => updateStatus(member.id, 'active')}
+                      disabled={busy === member.id}
+                      className="text-green-400 hover:text-green-300 disabled:opacity-40 transition-colors"
+                      title="Re-activate"
+                    >
+                      <CheckCircle size={18} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => deleteMember(member.id, member.display_name)}
+                    disabled={busy === member.id}
+                    className="text-gray-600 hover:text-red-400 disabled:opacity-40 transition-colors"
+                    title="Delete permanently"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

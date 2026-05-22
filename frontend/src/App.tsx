@@ -4,6 +4,7 @@ import { Login } from './pages/Login'
 import { Pending } from './pages/Pending'
 import { Dashboard } from './pages/Dashboard'
 import { TournamentView } from './pages/TournamentView'
+import { TournamentSummary } from './pages/TournamentSummary'
 import { AdminMembers } from './pages/admin/Members'
 import { AdminTournaments } from './pages/admin/Tournaments'
 import { AdminMatches } from './pages/admin/Matches'
@@ -25,6 +26,7 @@ export default function App() {
         <Route element={<ProtectedRoute requireActive />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/tournaments/:id" element={<TournamentView />} />
+          <Route path="/tournaments/:id/summary" element={<TournamentSummary />} />
 
           {/* Auth + active + admin */}
           <Route element={<ProtectedRoute requireAdmin />}>

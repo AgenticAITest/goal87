@@ -4,7 +4,7 @@ import axios from 'axios'
 import { createClient } from '@supabase/supabase-js'
 
 const app = express()
-app.use(cors({ origin: ['http://localhost:5173', 'https://goal.top87.id'] }))
+app.use(cors({ origin: ['http://localhost:5173', 'https://bola.top87.id'] }))
 app.use(express.json())
 
 const {

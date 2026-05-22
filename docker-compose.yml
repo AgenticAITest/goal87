@@ -6,13 +6,13 @@ services:
       args:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-        VITE_WORKER_URL: ${VITE_WORKER_URL:-https://goal.top87.id/api/worker}
+        VITE_WORKER_URL: ${VITE_WORKER_URL:-https://bola.top87.id/api/worker}
     restart: always
     networks:
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pildun-frontend.rule=Host(`goal.top87.id`) && !PathPrefix(`/api/worker`)"
+      - "traefik.http.routers.pildun-frontend.rule=Host(`bola.top87.id`) && !PathPrefix(`/api/worker`)"
       - "traefik.http.routers.pildun-frontend.entrypoints=websecure"
       - "traefik.http.routers.pildun-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.pildun-frontend.loadbalancer.server.port=80"
@@ -26,7 +26,7 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pildun-worker.rule=Host(`goal.top87.id`) && PathPrefix(`/api/worker`)"
+      - "traefik.http.routers.pildun-worker.rule=Host(`bola.top87.id`) && PathPrefix(`/api/worker`)"
       - "traefik.http.routers.pildun-worker.entrypoints=websecure"
       - "traefik.http.routers.pildun-worker.tls.certresolver=letsencrypt"
       - "traefik.http.services.pildun-worker.loadbalancer.server.port=3001"

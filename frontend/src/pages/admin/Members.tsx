@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle, XCircle, Trash2 } from 'lucide-react'
+import { CheckCircle, XCircle, Trash2, Crown } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { Navbar } from '../../components/Navbar'
+import { useAuth } from '../../hooks/useAuth'
 import type { MemberStatus, Profile } from '../../types/database'
 
 type Filter = 'all' | MemberStatus
@@ -13,6 +14,7 @@ const STATUS_STYLES: Record<MemberStatus, string> = {
 }
 
 export function AdminMembers() {
+  const { profile: self } = useAuth()
   const [members, setMembers] = useState<Profile[]>([])
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState(true)
@@ -51,6 +53,20 @@ export function AdminMembers() {
     const { error } = await supabase.rpc('admin_delete_member', { p_target_id: id })
     if (error) setError(error.message)
     else setMembers((prev) => prev.filter((m) => m.id !== id))
+    setBusy(null)
+  }
+
+  async function toggleAdmin(member: Profile) {
+    const action = member.is_admin ? 'remove admin from' : 'make admin'
+    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${member.display_name}?`)) return
+    setBusy(member.id)
+    setError(null)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_admin: !member.is_admin })
+      .eq('id', member.id)
+    if (error) setError(error.message)
+    else setMembers((prev) => prev.map((m) => m.id === member.id ? { ...m, is_admin: !m.is_admin } : m))
     setBusy(null)
   }
 
@@ -118,7 +134,10 @@ export function AdminMembers() {
                     {member.display_name.charAt(0).toUpperCase() || '?'}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-white font-medium text-sm truncate">{member.display_name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-white font-medium text-sm truncate">{member.display_name}</p>
+                      {member.is_admin && <Crown size={12} className="text-gold shrink-0" />}
+                    </div>
                     <p className="text-gray-500 text-xs truncate">{member.email}</p>
                   </div>
                 </div>
@@ -158,6 +177,16 @@ export function AdminMembers() {
                       title="Re-activate"
                     >
                       <CheckCircle size={18} />
+                    </button>
+                  )}
+                  {self?.id !== member.id && (
+                    <button
+                      onClick={() => toggleAdmin(member)}
+                      disabled={busy === member.id}
+                      className={`disabled:opacity-40 transition-colors ${member.is_admin ? 'text-gold hover:text-gold/60' : 'text-gray-600 hover:text-gold'}`}
+                      title={member.is_admin ? 'Remove admin' : 'Make admin'}
+                    >
+                      <Crown size={16} />
                     </button>
                   )}
                   <button

@@ -10,6 +10,17 @@ export interface Profile {
   email: string
   status: MemberStatus
   is_admin: boolean
+  balance_idr: number
+  created_at: string
+}
+
+export interface BalanceLedgerRow {
+  id: string
+  user_id: string
+  adjusted_by: string
+  previous_balance_idr: number
+  new_balance_idr: number
+  note: string | null
   created_at: string
 }
 

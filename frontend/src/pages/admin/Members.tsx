@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle, XCircle, Trash2, Crown } from 'lucide-react'
+import { CheckCircle, XCircle, Trash2, Crown, Pencil, Check, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { Navbar } from '../../components/Navbar'
 import { useAuth } from '../../hooks/useAuth'
+import { formatIDR } from '../../lib/fmt'
 import type { MemberStatus, Profile } from '../../types/database'
 
 type Filter = 'all' | MemberStatus
@@ -18,8 +19,10 @@ export function AdminMembers() {
   const [members, setMembers] = useState<Profile[]>([])
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState<string | null>(null)  // id of member being acted on
-  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy]                   = useState<string | null>(null)  // id of member being acted on
+  const [error, setError]                 = useState<string | null>(null)
+  const [editingBalance, setEditingBalance] = useState<string | null>(null)  // member id
+  const [draftBalance, setDraftBalance]   = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -53,6 +56,39 @@ export function AdminMembers() {
     const { error } = await supabase.rpc('admin_delete_member', { p_target_id: id })
     if (error) setError(error.message)
     else setMembers((prev) => prev.filter((m) => m.id !== id))
+    setBusy(null)
+  }
+
+  function startEditBalance(member: Profile) {
+    setEditingBalance(member.id)
+    setDraftBalance(String(member.balance_idr))
+    setError(null)
+  }
+
+  function cancelEditBalance() {
+    setEditingBalance(null)
+    setDraftBalance('')
+  }
+
+  async function saveBalance(member: Profile) {
+    const val = parseInt(draftBalance, 10)
+    if (isNaN(val) || val < 0) {
+      setError('Balance must be a non-negative whole number.')
+      return
+    }
+    setBusy(member.id)
+    setError(null)
+    const { error } = await supabase.rpc('admin_set_balance', {
+      p_target_id: member.id,
+      p_new_balance: val,
+    })
+    if (error) {
+      setError(error.message)
+    } else {
+      setMembers((prev) => prev.map((m) => m.id === member.id ? { ...m, balance_idr: val } : m))
+      setEditingBalance(null)
+      setDraftBalance('')
+    }
     setBusy(null)
   }
 
@@ -126,7 +162,7 @@ export function AdminMembers() {
             {visible.map((member) => (
               <div
                 key={member.id}
-                className="glass rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
+                className="glass rounded-2xl px-5 py-4 flex items-center justify-between gap-4 flex-wrap"
               >
                 <div className="flex items-center gap-4 min-w-0">
                   {/* Avatar */}
@@ -139,6 +175,48 @@ export function AdminMembers() {
                       {member.is_admin && <Crown size={12} className="text-gold shrink-0" />}
                     </div>
                     <p className="text-gray-500 text-xs truncate">{member.email}</p>
+
+                    {/* Balance */}
+                    {editingBalance === member.id ? (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className="text-gray-500 text-xs">Rp</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={draftBalance}
+                          onChange={(e) => setDraftBalance(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveBalance(member); if (e.key === 'Escape') cancelEditBalance() }}
+                          className="w-36 bg-white/5 border border-white/10 rounded-lg px-2 py-0.5 text-white text-xs focus:outline-none focus:border-gold/50"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => saveBalance(member)}
+                          disabled={busy === member.id}
+                          className="text-green-400 hover:text-green-300 disabled:opacity-40"
+                          title="Save"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={cancelEditBalance}
+                          className="text-gray-500 hover:text-gray-300"
+                          title="Cancel"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-gray-400 text-xs">{formatIDR(member.balance_idr)}</span>
+                        <button
+                          onClick={() => startEditBalance(member)}
+                          className="text-gray-600 hover:text-gold transition-colors"
+                          title="Set balance"
+                        >
+                          <Pencil size={11} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -21,14 +21,10 @@ export function Login() {
   return (
     <div className="min-h-screen bg-charcoal flex items-center justify-center px-6">
       <div className="glass rounded-2xl p-10 w-full max-w-sm text-center space-y-8">
-        <div className="space-y-2">
-          <h1 className="font-serif text-4xl font-bold text-white gold-glow">Pildun</h1>
-          <p className="text-xs text-gold uppercase tracking-[0.3em]">Friendly Betting</p>
-        </div>
+        <img src="/logo.png" alt="TOP87 Bola" className="w-32 h-32 mx-auto" />
 
         <p className="text-gray-400 text-sm leading-relaxed">
-          Predict exact scores across tournaments.<br />
-          Winners split the pot.
+          Anyiiinngg... Koflok siah!!
         </p>
 
         <button

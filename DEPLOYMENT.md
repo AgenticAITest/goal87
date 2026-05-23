@@ -143,8 +143,8 @@ Paste and run the contents of all files in `supabase/migrations/` **in filename 
 
 1. Supabase dashboard → Authentication → Sign In / Providers → Google
 2. Enable, and enter:
-   - **Client ID**: `1082729016346-a9dctbdlk3emetcimp54hk0iir4r23e6.apps.googleusercontent.com`
-   - **Client Secret**: (same OAuth client used by top87.id — get from TOP87_website Supabase project → Auth → Google → Reveal)
+   - **Client ID**: `521383591339-mqh58rogc4fhb9epjo0ugd0hq03uphan.apps.googleusercontent.com`
+   - **Client Secret**: from Google Cloud Console → "bola" project (wyahya@gmail.com) → Google Auth Platform → Clients → this OAuth client → Add secret
 3. Save
 
 Then under **URL Configuration**:
@@ -155,10 +155,9 @@ Then under **URL Configuration**:
 
 The existing OAuth 2.0 client for `top87.id` is reused. You must add the new callback URI:
 
-1. Go to [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)  
-   _(Requires 2-step verification to be enabled on the Google account)_
-2. Click the OAuth client: `1082729016346-a9dctbdlk3emetcimp54hk0iir4r23e6`
-3. Under **Authorized redirect URIs**, add:
+1. Go to Google Cloud Console → sign in as **wyahya@gmail.com** → select project **bola**
+2. Google Auth Platform → Clients → click `521383591339-mqh58rogc4fhb9epjo0ugd0hq03uphan`
+3. Under **Authorized redirect URIs**, ensure this is listed:
    ```
    https://wgaoxftcxpoacxeqisxt.supabase.co/auth/v1/callback
    ```

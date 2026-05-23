@@ -10,6 +10,7 @@ import { AdminTournaments } from './pages/admin/Tournaments'
 import { AdminMatches } from './pages/admin/Matches'
 import { AdminPredictions } from './pages/admin/Predictions'
 import { AdminHighlights } from './pages/admin/Highlights'
+import { AdminSandbox } from './pages/admin/Sandbox'
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/admin/matches" element={<AdminMatches />} />
             <Route path="/admin/predictions" element={<AdminPredictions />} />
             <Route path="/admin/highlights" element={<AdminHighlights />} />
+            <Route path="/admin/sandbox" element={<AdminSandbox />} />
           </Route>
         </Route>
 

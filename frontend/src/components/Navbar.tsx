@@ -9,6 +9,7 @@ const ADMIN_LINKS = [
   { to: '/admin/predictions', label: 'Predictions' },
   { to: '/admin/members',     label: 'Members' },
   { to: '/admin/highlights',  label: 'Highlights' },
+  { to: '/admin/sandbox',     label: 'Sandbox' },
 ]
 
 export function Navbar() {

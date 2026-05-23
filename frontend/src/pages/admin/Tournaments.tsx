@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Play, Pencil, RefreshCw, Search } from 'lucide-react'
+import { Plus, Play, Pencil, RefreshCw, Search, CalendarPlus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { Navbar } from '../../components/Navbar'
 import { formatIDR } from '../../lib/fmt'
@@ -19,6 +19,13 @@ interface TForm {
   start_at: string
   end_at: string
   status: TournamentStatus
+  is_test: boolean
+}
+
+interface FixtureForm {
+  home_team: string
+  away_team: string
+  kickoff_at: string
 }
 
 interface FdCompetition {
@@ -29,7 +36,8 @@ interface FdCompetition {
   currentSeason: { startDate: string } | null
 }
 
-const EMPTY: TForm = { name: '', stake_idr: 100000, start_at: '', end_at: '', status: 'draft' }
+const EMPTY: TForm = { name: '', stake_idr: 100000, start_at: '', end_at: '', status: 'draft', is_test: false }
+const EMPTY_FIXTURE: FixtureForm = { home_team: '', away_team: '', kickoff_at: '' }
 
 export function AdminTournaments() {
   const [items, setItems]       = useState<Tournament[]>([])
@@ -40,6 +48,11 @@ export function AdminTournaments() {
   const [modal, setModal]       = useState<{ open: boolean; editing: Tournament | null }>({ open: false, editing: null })
   const [form, setForm]         = useState<TForm>(EMPTY)
   const [saving, setSaving]     = useState(false)
+
+  // Add Fixture modal
+  const [fixtureModal, setFixtureModal]   = useState<{ open: boolean; tournament: Tournament | null }>({ open: false, tournament: null })
+  const [fixtureForm, setFixtureForm]     = useState<FixtureForm>(EMPTY_FIXTURE)
+  const [savingFixture, setSavingFixture] = useState(false)
 
   // Pull Fixtures modal
   const [pullModal, setPullModal]         = useState<{ open: boolean; tournament: Tournament | null }>({ open: false, tournament: null })
@@ -74,6 +87,7 @@ export function AdminTournaments() {
       start_at:  t.start_at ? t.start_at.slice(0, 10) : '',
       end_at:    t.end_at   ? t.end_at.slice(0, 10)   : '',
       status:    t.status,
+      is_test:   t.is_test,
     })
     setModal({ open: true, editing: t })
     setError(null)
@@ -89,6 +103,7 @@ export function AdminTournaments() {
       start_at:  form.start_at || null,
       end_at:    form.end_at   || null,
       status:    form.status,
+      is_test:   form.is_test,
     }
     let err
     if (modal.editing) {
@@ -99,6 +114,34 @@ export function AdminTournaments() {
     if (err) setError(err.message)
     else { setModal({ open: false, editing: null }); await load() }
     setSaving(false)
+  }
+
+  // ── Add Fixture ────────────────────────────────────────────────────────
+  function openFixtureModal(t: Tournament) {
+    setFixtureForm(EMPTY_FIXTURE)
+    setFixtureModal({ open: true, tournament: t })
+    setError(null)
+  }
+
+  async function saveFixture() {
+    const t = fixtureModal.tournament
+    if (!t) return
+    if (!fixtureForm.home_team.trim() || !fixtureForm.away_team.trim() || !fixtureForm.kickoff_at) {
+      setError('All fields are required.')
+      return
+    }
+    setSavingFixture(true)
+    setError(null)
+    const { error: err } = await supabase.from('matches').insert({
+      tournament_id: t.id,
+      home_team:     fixtureForm.home_team.trim(),
+      away_team:     fixtureForm.away_team.trim(),
+      kickoff_at:    new Date(fixtureForm.kickoff_at).toISOString(),
+      status:        'SCHEDULED',
+    })
+    if (err) setError(err.message)
+    else setFixtureModal({ open: false, tournament: null })
+    setSavingFixture(false)
   }
 
   // ── Pull Fixtures ──────────────────────────────────────────────────────
@@ -202,6 +245,7 @@ export function AdminTournaments() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-white font-semibold">{t.name}</h2>
                       <span className={`rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-widest font-bold ${STATUS_STYLES[t.status]}`}>{t.status}</span>
+                      {t.is_test && <span className="rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-widest font-bold text-gold bg-gold/10">test</span>}
                     </div>
                     <p className="text-gray-400 text-sm">
                       {t.api_competition_id
@@ -216,6 +260,12 @@ export function AdminTournaments() {
                   <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                     <button onClick={() => openEdit(t)} className="glass px-3 py-1.5 rounded-full text-xs text-gray-300 hover:text-white flex items-center gap-1.5 transition-colors">
                       <Pencil size={12} /> Edit
+                    </button>
+                    <button
+                      onClick={() => openFixtureModal(t)}
+                      className="glass px-3 py-1.5 rounded-full text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors"
+                    >
+                      <CalendarPlus size={12} /> Add Fixture
                     </button>
                     <button
                       onClick={() => openPullModal(t)}
@@ -272,10 +322,74 @@ export function AdminTournaments() {
               </select>
             </div>
 
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_test}
+                onChange={(e) => setForm((f) => ({ ...f, is_test: e.target.checked }))}
+                className="w-4 h-4 accent-gold"
+              />
+              <span className="text-sm text-gray-300">Test tournament (sandbox only)</span>
+            </label>
+
             <div className="flex gap-3 pt-2">
               <button onClick={() => setModal({ open: false, editing: null })} className="flex-1 glass py-2.5 rounded-full text-sm text-gray-300 hover:text-white transition-colors">Cancel</button>
               <button onClick={save} disabled={saving} className="flex-1 bg-gold hover:bg-gold-light disabled:opacity-50 text-charcoal py-2.5 rounded-full text-sm font-bold transition-colors">
                 {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Fixture modal ──────────────────────────────────────────── */}
+      {fixtureModal.open && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="glass rounded-2xl p-6 w-full max-w-md space-y-4">
+            <div>
+              <h2 className="font-serif text-xl font-bold text-white">Add Fixture</h2>
+              <p className="text-gray-400 text-sm mt-1">to <span className="text-white">{fixtureModal.tournament?.name}</span></p>
+            </div>
+
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-400 uppercase tracking-widest">Home Team</label>
+              <input
+                type="text"
+                value={fixtureForm.home_team}
+                onChange={(e) => setFixtureForm((f) => ({ ...f, home_team: e.target.value }))}
+                placeholder="e.g. Arsenal"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-400 uppercase tracking-widest">Away Team</label>
+              <input
+                type="text"
+                value={fixtureForm.away_team}
+                onChange={(e) => setFixtureForm((f) => ({ ...f, away_team: e.target.value }))}
+                placeholder="e.g. Chelsea"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-400 uppercase tracking-widest">Kickoff (local time)</label>
+              <input
+                type="datetime-local"
+                value={fixtureForm.kickoff_at}
+                onChange={(e) => setFixtureForm((f) => ({ ...f, kickoff_at: e.target.value }))}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors"
+              />
+              <p className="text-gray-500 text-xs">Set in the future so players can enter predictions.</p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setFixtureModal({ open: false, tournament: null })} className="flex-1 glass py-2.5 rounded-full text-sm text-gray-300 hover:text-white transition-colors">Cancel</button>
+              <button onClick={saveFixture} disabled={savingFixture} className="flex-1 bg-gold hover:bg-gold-light disabled:opacity-50 text-charcoal py-2.5 rounded-full text-sm font-bold transition-colors">
+                {savingFixture ? 'Saving…' : 'Add Fixture'}
               </button>
             </div>
           </div>

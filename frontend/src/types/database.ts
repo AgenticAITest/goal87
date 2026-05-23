@@ -22,13 +22,14 @@ export interface Tournament {
   start_at: string | null
   end_at: string | null
   status: TournamentStatus
+  is_test: boolean
   created_at: string
 }
 
 export interface Match {
   id: string
   tournament_id: string
-  api_match_id: number
+  api_match_id: number | null
   home_team: string
   away_team: string
   kickoff_at: string

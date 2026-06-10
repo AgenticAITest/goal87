@@ -26,6 +26,94 @@ const STATUS_STYLES: Record<string, string> = {
   CANCELLED: 'text-orange-400 bg-orange-400/10',
 }
 
+const TEAM_FLAGS: Record<string, string> = {
+  'Afghanistan': '🇦🇫', 'Albania': '🇦🇱', 'Algeria': '🇩🇿',
+  'Angola': '🇦🇴', 'Argentina': '🇦🇷', 'Armenia': '🇦🇲',
+  'Australia': '🇦🇺', 'Austria': '🇦🇹', 'Azerbaijan': '🇦🇿',
+  'Bahrain': '🇧🇭', 'Bangladesh': '🇧🇩', 'Belgium': '🇧🇪',
+  'Bolivia': '🇧🇴', 'Bosnia and Herzegovina': '🇧🇦',
+  'Brazil': '🇧🇷', 'Brunei': '🇧🇳', 'Bulgaria': '🇧🇬',
+  'Cambodia': '🇰🇭', 'Cameroon': '🇨🇲', 'Canada': '🇨🇦',
+  'Chile': '🇨🇱', 'China': '🇨🇳', 'China PR': '🇨🇳',
+  'Colombia': '🇨🇴', 'Congo': '🇨🇬', 'Costa Rica': '🇨🇷',
+  'Croatia': '🇭🇷', 'Cyprus': '🇨🇾',
+  'Czech Republic': '🇨🇿', 'Czechia': '🇨🇿',
+  'Denmark': '🇩🇰', 'Ecuador': '🇪🇨', 'Egypt': '🇪🇬',
+  'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Estonia': '🇪🇪', 'Ethiopia': '🇪🇹',
+  'Finland': '🇫🇮', 'France': '🇫🇷', 'Georgia': '🇬🇪',
+  'Germany': '🇩🇪', 'Ghana': '🇬🇭', 'Greece': '🇬🇷',
+  'Guatemala': '🇬🇹', 'Guinea': '🇬🇳', 'Honduras': '🇭🇳',
+  'Hungary': '🇭🇺', 'Iceland': '🇮🇸', 'India': '🇮🇳',
+  'Indonesia': '🇮🇩', 'Iran': '🇮🇷', 'Iraq': '🇮🇶',
+  'Ireland': '🇮🇪', 'Israel': '🇮🇱', 'Italy': '🇮🇹',
+  "Côte d'Ivoire": '🇨🇮', 'Ivory Coast': '🇨🇮',
+  'Jamaica': '🇯🇲', 'Japan': '🇯🇵', 'Jordan': '🇯🇴',
+  'Kazakhstan': '🇰🇿', 'Kenya': '🇰🇪', 'Kuwait': '🇰🇼',
+  'Kyrgyzstan': '🇰🇬', 'Laos': '🇱🇦', 'Latvia': '🇱🇻',
+  'Lebanon': '🇱🇧', 'Lithuania': '🇱🇹', 'Luxembourg': '🇱🇺',
+  'Malaysia': '🇲🇾', 'Mali': '🇲🇱', 'Mexico': '🇲🇽',
+  'Moldova': '🇲🇩', 'Mongolia': '🇲🇳', 'Montenegro': '🇲🇪',
+  'Morocco': '🇲🇦', 'Myanmar': '🇲🇲', 'Nepal': '🇳🇵',
+  'Netherlands': '🇳🇱', 'New Zealand': '🇳🇿', 'Nigeria': '🇳🇬',
+  'North Korea': '🇰🇵', 'North Macedonia': '🇲🇰',
+  'Norway': '🇳🇴', 'Oman': '🇴🇲', 'Pakistan': '🇵🇰',
+  'Palestine': '🇵🇸', 'Panama': '🇵🇦', 'Paraguay': '🇵🇾',
+  'Peru': '🇵🇪', 'Philippines': '🇵🇭', 'Poland': '🇵🇱',
+  'Portugal': '🇵🇹', 'Qatar': '🇶🇦', 'Romania': '🇷🇴',
+  'Russia': '🇷🇺', 'Saudi Arabia': '🇸🇦', 'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'Senegal': '🇸🇳', 'Serbia': '🇷🇸', 'Singapore': '🇸🇬',
+  'Slovakia': '🇸🇰', 'Slovenia': '🇸🇮', 'South Africa': '🇿🇦',
+  'South Korea': '🇰🇷', 'Spain': '🇪🇸', 'Sri Lanka': '🇱🇰',
+  'Sweden': '🇸🇪', 'Switzerland': '🇨🇭', 'Syria': '🇸🇾',
+  'Taiwan': '🇹🇼', 'Tajikistan': '🇹🇯', 'Tanzania': '🇹🇿',
+  'Thailand': '🇹🇭', 'Timor-Leste': '🇹🇱', 'Tunisia': '🇹🇳',
+  'Turkey': '🇹🇷', 'Türkiye': '🇹🇷', 'Turkmenistan': '🇹🇲',
+  'UAE': '🇦🇪', 'Uganda': '🇺🇬', 'Ukraine': '🇺🇦',
+  'United Arab Emirates': '🇦🇪', 'United States': '🇺🇸',
+  'Uruguay': '🇺🇾', 'USA': '🇺🇸', 'Uzbekistan': '🇺🇿',
+  'Venezuela': '🇻🇪', 'Vietnam': '🇻🇳', 'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+  'Yemen': '🇾🇪', 'Zambia': '🇿🇲', 'Zimbabwe': '🇿🇼',
+}
+
+function teamColor(name: string): string {
+  let hash = 0
+  for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff
+  return `hsl(${hash % 360},48%,32%)`
+}
+
+function TeamBadge({ name }: { name: string }) {
+  const flag = TEAM_FLAGS[name]
+  if (flag) {
+    return (
+      <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[2rem] select-none">
+        {flag}
+      </div>
+    )
+  }
+  const words = name.trim().split(/\s+/)
+  const abbr  = (words.length === 1
+    ? name.slice(0, 3)
+    : words.map(w => w[0]).join('').slice(0, 3)
+  ).toUpperCase()
+  return (
+    <div
+      style={{ backgroundColor: teamColor(name) }}
+      className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-sm select-none"
+    >
+      {abbr}
+    </div>
+  )
+}
+
+function timeUntil(iso: string): string | null {
+  const ms = new Date(iso).getTime() - Date.now()
+  if (ms <= 0 || ms > 24 * 60 * 60 * 1000) return null
+  const h = Math.floor(ms / 3_600_000)
+  const m = Math.floor((ms % 3_600_000) / 60_000)
+  if (h === 0) return `in ${m}m`
+  return m > 0 ? `in ${h}h ${m}m` : `in ${h}h`
+}
+
 export function TournamentView() {
   const { id } = useParams<{ id: string }>()
   const { profile } = useAuth()
@@ -37,11 +125,11 @@ export function TournamentView() {
   const [settlements, setSettlements] = useState<Record<string, SettleEntry>>({})
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
 
-  const [filter, setFilter]     = useState<FilterTab>('upcoming')
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState<string | null>(null)
-  const [editing, setEditing]   = useState<string | null>(null)
-  const [drafts, setDrafts]     = useState<Record<string, { home: number; away: number }>>({})
+  const [filter, setFilter]         = useState<FilterTab>('upcoming')
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+  const [editing, setEditing]       = useState<string | null>(null)
+  const [drafts, setDrafts]         = useState<Record<string, { home: number; away: number }>>({})
   const [submitting, setSubmitting] = useState<string | null>(null)
 
   useEffect(() => {
@@ -114,7 +202,6 @@ export function TournamentView() {
     const settleMap: Record<string, SettleEntry> = {}
     for (const x of s ?? []) settleMap[x.match_id] = { amount_idr: x.amount_idr, is_winner: x.is_winner, is_void: x.is_void }
 
-    // Initialise drafts from existing predictions, else 0–0
     const initDrafts: Record<string, { home: number; away: number }> = {}
     for (const mx of matchList) {
       const pred = predMap[mx.id]
@@ -162,7 +249,6 @@ export function TournamentView() {
   }
 
   const now = new Date()
-  // Test-tournament admins can predict regardless of kickoff time (sandbox testing flow)
   const isTestAdmin = !!tournament?.is_test && !!profile?.is_admin
   const isLocked = (m: Match) =>
     isTestAdmin
@@ -282,145 +368,266 @@ export function TournamentView() {
               ))}
             </div>
 
-            {filtered.length === 0 ? (
-              <p className="text-gray-500 text-sm">No {filter} matches.</p>
-            ) : (
-              <div className="space-y-3">
-                {filtered.map((m) => {
-                  const pred    = predictions[m.id]
-                  const settle  = settlements[m.id]
-                  const draft   = drafts[m.id] ?? { home: 0, away: 0 }
-                  const locked  = isLocked(m)
-                  const isEdit  = editing === m.id
-                  const isSub   = submitting === m.id
-                  const isLive  = LIVE_STATUSES.includes(m.status)
-                  const isDone  = FINISHED_STATUSES.includes(m.status)
+            {/* ── Upcoming: 2-column prediction card grid ── */}
+            {filter === 'upcoming' && (
+              filtered.length === 0 ? (
+                <p className="text-gray-500 text-sm">No upcoming matches.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {filtered.map((m) => {
+                    const pred   = predictions[m.id]
+                    const draft  = drafts[m.id] ?? { home: 0, away: 0 }
+                    const locked = isLocked(m)
+                    const isEdit = editing === m.id
+                    const isSub  = submitting === m.id
+                    const eta    = timeUntil(m.kickoff_at)
 
-                  return (
-                    <div key={m.id} className="glass rounded-2xl px-5 py-4 space-y-3">
-                      {/* Match row */}
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-gray-500 text-xs shrink-0">{formatKickoff(m.kickoff_at)}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-medium truncate">
-                            {m.home_team} <span className="text-gray-500">vs</span> {m.away_team}
-                          </p>
+                    return (
+                      <div key={m.id} className="glass rounded-2xl p-4 space-y-3 flex flex-col">
+
+                        {/* Kickoff row */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-gray-500 truncate">{formatKickoff(m.kickoff_at)}</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {eta && (
+                              <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
+                                {eta}
+                              </span>
+                            )}
+                            {locked && <Lock size={11} className="text-gray-600" />}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {m.ft_home != null && m.ft_away != null && (
-                            <span className="text-gold font-bold text-sm">{m.ft_home}–{m.ft_away}</span>
+
+                        {/* Teams side by side */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                            <TeamBadge name={m.home_team} />
+                            <p className="text-white text-xs font-medium text-center leading-snug line-clamp-2">
+                              {m.home_team}
+                            </p>
+                          </div>
+                          <span className="text-gray-600 text-xs font-bold shrink-0">VS</span>
+                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                            <TeamBadge name={m.away_team} />
+                            <p className="text-white text-xs font-medium text-center leading-snug line-clamp-2">
+                              {m.away_team}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Prediction area */}
+                        <div className="border-t border-white/5 pt-3 mt-auto">
+                          {locked && pred ? (
+                            <div className="flex items-center justify-center gap-2 text-sm">
+                              <Lock size={11} className="text-gray-600" />
+                              <span className="text-gray-500 text-xs">Locked:</span>
+                              <span className="text-white font-bold">{pred.predicted_home}–{pred.predicted_away}</span>
+                            </div>
+                          ) : locked && !pred ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <Lock size={11} className="text-gray-600" />
+                              <span className="text-gray-600 text-xs italic">No prediction made</span>
+                            </div>
+                          ) : isEdit || !pred ? (
+                            <div className="space-y-2">
+                              <p className="text-[10px] text-gray-500 uppercase tracking-widest text-center">
+                                {pred ? 'Edit prediction' : 'Your prediction'}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number" min={0}
+                                  value={draft.home}
+                                  onChange={(e) => setDraft(m.id, 'home', Math.max(0, Number(e.target.value)))}
+                                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
+                                />
+                                <span className="text-gray-500 text-sm shrink-0">–</span>
+                                <input
+                                  type="number" min={0}
+                                  value={draft.away}
+                                  onChange={(e) => setDraft(m.id, 'away', Math.max(0, Number(e.target.value)))}
+                                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => submitPrediction(m.id)}
+                                  disabled={isSub}
+                                  className="flex-1 bg-gold hover:bg-gold-light text-charcoal py-2 rounded-full text-xs font-bold transition-colors disabled:opacity-50"
+                                >
+                                  {isSub ? '…' : pred ? 'Save' : 'Submit'}
+                                </button>
+                                {isEdit && (
+                                  <button
+                                    onClick={() => setEditing(null)}
+                                    className="text-gray-500 hover:text-white text-xs px-3 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-sm">
+                                <span className="text-gray-500 text-xs">Your pick:</span>
+                                <span className="text-white font-bold">{pred.predicted_home}–{pred.predicted_away}</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setEditing(m.id)
+                                  setDrafts((d) => ({ ...d, [m.id]: { home: pred.predicted_home, away: pred.predicted_away } }))
+                                }}
+                                className="text-xs text-gray-500 hover:text-gold transition-colors"
+                              >
+                                Edit
+                              </button>
+                            </div>
                           )}
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-widest font-bold ${STATUS_STYLES[m.status] ?? 'text-gray-400'}`}>
-                            {isLive ? '● Live' : m.status}
-                          </span>
                         </div>
                       </div>
+                    )
+                  })}
+                </div>
+              )
+            )}
 
-                      {/* Prediction area */}
-                      {isDone ? (
-                        /* Finished: show outcome */
-                        <div className="border-t border-white/5 pt-3">
-                          {pred ? (
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <span className="text-gray-500">Your pick:</span>
-                                <span className="text-white font-bold">{pred.predicted_home}–{pred.predicted_away}</span>
-                                {settle && !settle.is_void && (
-                                  <span className={`text-xs font-bold ${settle.is_winner ? 'text-green-400' : 'text-red-400'}`}>
-                                    {settle.is_winner ? '✓' : '✗'}
+            {/* ── Live / Finished: original list layout ── */}
+            {filter !== 'upcoming' && (
+              filtered.length === 0 ? (
+                <p className="text-gray-500 text-sm">No {filter} matches.</p>
+              ) : (
+                <div className="space-y-3">
+                  {filtered.map((m) => {
+                    const pred   = predictions[m.id]
+                    const settle = settlements[m.id]
+                    const draft  = drafts[m.id] ?? { home: 0, away: 0 }
+                    const locked = isLocked(m)
+                    const isEdit = editing === m.id
+                    const isSub  = submitting === m.id
+                    const isLive = LIVE_STATUSES.includes(m.status)
+                    const isDone = FINISHED_STATUSES.includes(m.status)
+
+                    return (
+                      <div key={m.id} className="glass rounded-2xl px-5 py-4 space-y-3">
+                        {/* Match row */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-gray-500 text-xs shrink-0">{formatKickoff(m.kickoff_at)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm font-medium truncate">
+                              {m.home_team} <span className="text-gray-500">vs</span> {m.away_team}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {m.ft_home != null && m.ft_away != null && (
+                              <span className="text-gold font-bold text-sm">{m.ft_home}–{m.ft_away}</span>
+                            )}
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-widest font-bold ${STATUS_STYLES[m.status] ?? 'text-gray-400'}`}>
+                              {isLive ? '● Live' : m.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Prediction area */}
+                        {isDone ? (
+                          <div className="border-t border-white/5 pt-3">
+                            {pred ? (
+                              <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-gray-500">Your pick:</span>
+                                  <span className="text-white font-bold">{pred.predicted_home}–{pred.predicted_away}</span>
+                                  {settle && !settle.is_void && (
+                                    <span className={`text-xs font-bold ${settle.is_winner ? 'text-green-400' : 'text-red-400'}`}>
+                                      {settle.is_winner ? '✓' : '✗'}
+                                    </span>
+                                  )}
+                                </div>
+                                {settle && (
+                                  <span className={`text-sm font-bold ${
+                                    settle.is_void ? 'text-gray-500' :
+                                    settle.amount_idr >= 0 ? 'text-green-400' : 'text-red-400'
+                                  }`}>
+                                    {settle.is_void ? 'Void' : `${settle.amount_idr >= 0 ? '+' : ''}${formatIDR(settle.amount_idr)}`}
                                   </span>
                                 )}
                               </div>
-                              {settle && (
-                                <span className={`text-sm font-bold ${
-                                  settle.is_void ? 'text-gray-500' :
-                                  settle.amount_idr >= 0 ? 'text-green-400' : 'text-red-400'
-                                }`}>
-                                  {settle.is_void ? 'Void' : `${settle.amount_idr >= 0 ? '+' : ''}${formatIDR(settle.amount_idr)}`}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-gray-600 text-xs italic">No prediction made</p>
-                          )}
-                        </div>
-                      ) : locked && pred ? (
-                        /* Live or kicked off — show prediction locked */
-                        <div className="border-t border-white/5 pt-3 flex items-center gap-2 text-sm">
-                          <Lock size={11} className="text-gray-600" />
-                          <span className="text-gray-500">Your pick:</span>
-                          <span className="text-white font-bold">{pred.predicted_home}–{pred.predicted_away}</span>
-                        </div>
-                      ) : locked && !pred ? (
-                        /* Kicked off, no prediction */
-                        <div className="border-t border-white/5 pt-3 flex items-center gap-2 text-sm">
-                          <Lock size={11} className="text-gray-600" />
-                          <span className="text-gray-600 italic text-xs">No prediction made</span>
-                        </div>
-                      ) : isEdit || !pred ? (
-                        /* Prediction form */
-                        <div className="border-t border-white/5 pt-3 space-y-2">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest">
-                            {pred ? 'Edit prediction' : 'Your prediction'}
-                          </p>
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 space-y-1">
-                              <p className="text-[10px] text-gray-500 truncate">{m.home_team}</p>
-                              <input
-                                type="number" min={0}
-                                value={draft.home}
-                                onChange={(e) => setDraft(m.id, 'home', Math.max(0, Number(e.target.value)))}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
-                              />
-                            </div>
-                            <span className="text-gray-500 text-sm pt-4">–</span>
-                            <div className="flex-1 space-y-1">
-                              <p className="text-[10px] text-gray-500 truncate">{m.away_team}</p>
-                              <input
-                                type="number" min={0}
-                                value={draft.away}
-                                onChange={(e) => setDraft(m.id, 'away', Math.max(0, Number(e.target.value)))}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
-                              />
-                            </div>
-                            <div className="flex flex-col gap-1.5 pt-5">
-                              <button
-                                onClick={() => submitPrediction(m.id)}
-                                disabled={isSub}
-                                className="bg-gold hover:bg-gold-light text-charcoal px-4 py-2 rounded-full text-xs font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
-                              >
-                                {isSub ? '…' : pred ? 'Save' : 'Submit'}
-                              </button>
-                              {isEdit && (
-                                <button
-                                  onClick={() => setEditing(null)}
-                                  className="text-gray-500 hover:text-white text-xs text-center transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                              )}
-                            </div>
+                            ) : (
+                              <p className="text-gray-600 text-xs italic">No prediction made</p>
+                            )}
                           </div>
-                        </div>
-                      ) : (
-                        /* Has prediction, not editing */
-                        <div className="border-t border-white/5 pt-3 flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-sm">
+                        ) : locked && pred ? (
+                          <div className="border-t border-white/5 pt-3 flex items-center gap-2 text-sm">
+                            <Lock size={11} className="text-gray-600" />
                             <span className="text-gray-500">Your pick:</span>
                             <span className="text-white font-bold">{pred.predicted_home}–{pred.predicted_away}</span>
                           </div>
-                          <button
-                            onClick={() => { setEditing(m.id); setDrafts((d) => ({ ...d, [m.id]: { home: pred.predicted_home, away: pred.predicted_away } })) }}
-                            className="text-xs text-gray-500 hover:text-gold transition-colors"
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+                        ) : locked && !pred ? (
+                          <div className="border-t border-white/5 pt-3 flex items-center gap-2 text-sm">
+                            <Lock size={11} className="text-gray-600" />
+                            <span className="text-gray-600 italic text-xs">No prediction made</span>
+                          </div>
+                        ) : isEdit || !pred ? (
+                          <div className="border-t border-white/5 pt-3 space-y-2">
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest">
+                              {pred ? 'Edit prediction' : 'Your prediction'}
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 space-y-1">
+                                <p className="text-[10px] text-gray-500 truncate">{m.home_team}</p>
+                                <input
+                                  type="number" min={0}
+                                  value={draft.home}
+                                  onChange={(e) => setDraft(m.id, 'home', Math.max(0, Number(e.target.value)))}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+                              <span className="text-gray-500 text-sm pt-4">–</span>
+                              <div className="flex-1 space-y-1">
+                                <p className="text-[10px] text-gray-500 truncate">{m.away_team}</p>
+                                <input
+                                  type="number" min={0}
+                                  value={draft.away}
+                                  onChange={(e) => setDraft(m.id, 'away', Math.max(0, Number(e.target.value)))}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1.5 pt-5">
+                                <button
+                                  onClick={() => submitPrediction(m.id)}
+                                  disabled={isSub}
+                                  className="bg-gold hover:bg-gold-light text-charcoal px-4 py-2 rounded-full text-xs font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {isSub ? '…' : pred ? 'Save' : 'Submit'}
+                                </button>
+                                {isEdit && (
+                                  <button
+                                    onClick={() => setEditing(null)}
+                                    className="text-gray-500 hover:text-white text-xs text-center transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border-t border-white/5 pt-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-gray-500">Your pick:</span>
+                              <span className="text-white font-bold">{pred.predicted_home}–{pred.predicted_away}</span>
+                            </div>
+                            <button
+                              onClick={() => { setEditing(m.id); setDrafts((d) => ({ ...d, [m.id]: { home: pred.predicted_home, away: pred.predicted_away } })) }}
+                              className="text-xs text-gray-500 hover:text-gold transition-colors"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
             )}
           </div>
 

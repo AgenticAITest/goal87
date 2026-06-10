@@ -72,8 +72,8 @@ export function AdminMembers() {
 
   async function saveBalance(member: Profile) {
     const val = parseInt(draftBalance, 10)
-    if (isNaN(val) || val < 0) {
-      setError('Balance must be a non-negative whole number.')
+    if (isNaN(val)) {
+      setError('Balance must be a whole number.')
       return
     }
     setBusy(member.id)
@@ -182,7 +182,6 @@ export function AdminMembers() {
                         <span className="text-gray-500 text-xs">Rp</span>
                         <input
                           type="number"
-                          min={0}
                           value={draftBalance}
                           onChange={(e) => setDraftBalance(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') saveBalance(member); if (e.key === 'Escape') cancelEditBalance() }}

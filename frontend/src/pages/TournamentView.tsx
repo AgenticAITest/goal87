@@ -162,7 +162,12 @@ export function TournamentView() {
   }
 
   const now = new Date()
-  const isLocked = (m: Match) => new Date(m.kickoff_at) <= now || !UPCOMING_STATUSES.includes(m.status)
+  // Test-tournament admins can predict regardless of kickoff time (sandbox testing flow)
+  const isTestAdmin = !!tournament?.is_test && !!profile?.is_admin
+  const isLocked = (m: Match) =>
+    isTestAdmin
+      ? !UPCOMING_STATUSES.includes(m.status)
+      : new Date(m.kickoff_at) <= now || !UPCOMING_STATUSES.includes(m.status)
 
   const filtered = matches.filter((m) => {
     if (filter === 'upcoming') return UPCOMING_STATUSES.includes(m.status)

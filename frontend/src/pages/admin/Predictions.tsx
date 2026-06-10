@@ -332,19 +332,19 @@ export function AdminPredictions() {
                             <p className="text-[10px] text-gray-500 uppercase tracking-widest text-center">
                               {pred ? 'Edit prediction' : 'Enter prediction'}
                             </p>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-center gap-2">
                               <input
                                 type="number" min={0}
                                 value={draft.home}
                                 onChange={(e) => setDraft(m.id, 'home', Math.max(0, Number(e.target.value)))}
-                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
+                                className="w-16 bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
                               />
                               <span className="text-gray-500 text-sm shrink-0">–</span>
                               <input
                                 type="number" min={0}
                                 value={draft.away}
                                 onChange={(e) => setDraft(m.id, 'away', Math.max(0, Number(e.target.value)))}
-                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
+                                className="w-16 bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-white text-center text-xl font-bold focus:outline-none focus:border-gold/50"
                               />
                             </div>
                             <div className="flex gap-2">

@@ -12,3 +12,8 @@
 .glass      { @apply bg-white/5 backdrop-blur-md border border-white/10; }
 .glass-gold { @apply bg-gold/5  backdrop-blur-md border border-gold/20; }
 .gold-glow  { text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
+
+select option {
+  background-color: #1c1c1c;
+  color: #ffffff;
+}

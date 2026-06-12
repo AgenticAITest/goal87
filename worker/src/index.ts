@@ -276,6 +276,14 @@ function normStatus(fdStatus: string): string {
   }
 }
 
+// ── Global JSON error handler ──────────────────────────────────────────────
+// Catches unhandled exceptions in async route handlers so the response is
+// always JSON (never Express's default HTML 500 page).
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[worker] unhandled error:', err)
+  res.status(500).json({ error: err.message || 'Internal error' })
+})
+
 // ── Start ──────────────────────────────────────────────────────────────────
 app.listen(Number(PORT), () => {
   console.log(`[worker] listening on :${PORT}`)

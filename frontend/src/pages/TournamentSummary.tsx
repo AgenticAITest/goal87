@@ -7,7 +7,7 @@ import { formatIDR } from '../lib/fmt'
 import { useAuth } from '../hooks/useAuth'
 import type { Match, Tournament } from '../types/database'
 
-interface Player { id: string; display_name: string }
+interface Player { id: string; display_name: string; balance_idr: number }
 
 interface MatchSummary {
   match: Match
@@ -68,7 +68,7 @@ export function TournamentSummary() {
     const [{ data: t }, { data: m }, { data: profs }] = await Promise.all([
       supabase.from('tournaments').select('*').eq('id', id).single(),
       supabase.from('matches').select('*').eq('tournament_id', id).order('kickoff_at'),
-      supabase.from('profiles').select('id, display_name').eq('status', 'active').order('display_name'),
+      supabase.from('profiles').select('id, display_name, balance_idr').eq('status', 'active').order('display_name'),
     ])
 
     if (!t) { setError('Tournament not found.'); setLoading(false); return }
@@ -117,9 +117,11 @@ export function TournamentSummary() {
       groupMap.get(label)!.push(r)
     }
 
-    // Build groups with running totals before each
+    // Build groups with running totals before each.
+    // Seed each player's running total from their admin-set balance_idr so
+    // "Running Total · Start" shows their balance before any match in this tournament.
     const running: Record<string, number> = {}
-    for (const pl of playerList) running[pl.id] = 0
+    for (const pl of playerList) running[pl.id] = pl.balance_idr
 
     const builtGroups: DateGroup[] = []
     for (const [label, rows] of groupMap) {
@@ -230,7 +232,7 @@ export function TournamentSummary() {
                         const n = totalsBeforeGroup[pl.id] ?? 0
                         return (
                           <td key={pl.id} className={`py-2 px-4 text-center text-xs font-bold ${balanceColor(n)}`}>
-                            {n !== 0 ? `${n > 0 ? '+' : ''}${formatIDR(n)}` : <span className="text-gray-600">—</span>}
+                            {n !== 0 ? formatIDR(n) : <span className="text-gray-600">—</span>}
                           </td>
                         )
                       })}
@@ -303,7 +305,7 @@ export function TournamentSummary() {
                       const n = finalTotals[pl.id] ?? 0
                       return (
                         <td key={pl.id} className={`py-3 px-4 text-center text-sm font-bold ${balanceColor(n)}`}>
-                          {n > 0 ? '+' : ''}{formatIDR(n)}
+                          {formatIDR(n)}
                         </td>
                       )
                     })}

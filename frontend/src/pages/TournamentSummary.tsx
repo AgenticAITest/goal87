@@ -160,8 +160,6 @@ export function TournamentSummary() {
     </div>
   )
 
-  const UPCOMING = ['SCHEDULED', 'TIMED']
-
   return (
     <div className="min-h-screen bg-charcoal">
       <Navbar />
@@ -321,7 +319,6 @@ export function TournamentSummary() {
                       </td>
                     </tr>
                     {pendingRows.map((r) => {
-                      const isUpcoming = UPCOMING.includes(r.match.status)
                       return (
                         <tr key={r.match.id} className="border-t border-white/5">
                           <td className="py-2 px-4 text-gray-600 text-xs whitespace-nowrap">
@@ -333,11 +330,9 @@ export function TournamentSummary() {
                           </td>
                           {players.map((pl) => {
                             const pred = r.preds[pl.id]
-                            // Hide other players' predictions for matches not yet kicked off
-                            const show = !isUpcoming || pl.id === profile?.id
                             return (
                               <td key={pl.id} className="py-2 px-4 text-center text-gray-600 text-xs">
-                                {show && pred ? `${pred.home}–${pred.away}` : <span className="text-gray-700">—</span>}
+                                {pred ? `${pred.home}–${pred.away}` : <span className="text-gray-700">—</span>}
                               </td>
                             )
                           })}

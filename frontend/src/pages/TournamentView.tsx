@@ -120,13 +120,12 @@ export function TournamentView() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  const [tournament, setTournament]         = useState<Tournament | null>(null)
-  const [matches, setMatches]               = useState<Match[]>([])
-  const [predictions, setPredictions]       = useState<Record<string, PredEntry>>({})
-  const [allPredictions, setAllPredictions] = useState<Record<string, Record<string, PredEntry>>>({})
-  const [settlements, setSettlements]       = useState<Record<string, SettleEntry>>({})
-  const [leaderboard, setLeaderboard]       = useState<LeaderboardRow[]>([])
-  const [members, setMembers]               = useState<MemberProfile[]>([])
+  const [tournament, setTournament]   = useState<Tournament | null>(null)
+  const [matches, setMatches]         = useState<Match[]>([])
+  const [predictions, setPredictions] = useState<Record<string, PredEntry>>({})
+  const [settlements, setSettlements] = useState<Record<string, SettleEntry>>({})
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
+  const [members, setMembers]         = useState<MemberProfile[]>([])
 
   const [filter, setFilter]         = useState<FilterTab>('upcoming')
   const [loading, setLoading]       = useState(true)
@@ -187,9 +186,10 @@ export function TournamentView() {
     const matchList = (m ?? []) as Match[]
     const matchIds  = matchList.map((x) => x.id)
 
-    const [{ data: allP }, { data: s }, { data: board }, { data: memberData }] = await Promise.all([
+    const [{ data: p }, { data: s }, { data: board }, { data: memberData }] = await Promise.all([
       supabase.from('predictions')
-        .select('match_id, predicted_home, predicted_away, user_id')
+        .select('match_id, predicted_home, predicted_away')
+        .eq('user_id', profile!.id)
         .in('match_id', matchIds),
       supabase.from('settlements')
         .select('match_id, amount_idr, is_winner, is_void')
@@ -202,17 +202,8 @@ export function TournamentView() {
         .order('display_name'),
     ])
 
-    const allPredMap: Record<string, Record<string, PredEntry>> = {}
-    for (const x of allP ?? []) {
-      if (!allPredMap[x.match_id]) allPredMap[x.match_id] = {}
-      allPredMap[x.match_id][x.user_id] = { predicted_home: x.predicted_home, predicted_away: x.predicted_away }
-    }
-
     const predMap: Record<string, PredEntry> = {}
-    for (const x of allP ?? []) {
-      if (x.user_id === profile!.id)
-        predMap[x.match_id] = { predicted_home: x.predicted_home, predicted_away: x.predicted_away }
-    }
+    for (const x of p ?? []) predMap[x.match_id] = { predicted_home: x.predicted_home, predicted_away: x.predicted_away }
 
     const settleMap: Record<string, SettleEntry> = {}
     for (const x of s ?? []) settleMap[x.match_id] = { amount_idr: x.amount_idr, is_winner: x.is_winner, is_void: x.is_void }
@@ -226,7 +217,6 @@ export function TournamentView() {
     setTournament(t as Tournament)
     setMatches(matchList)
     setPredictions(predMap)
-    setAllPredictions(allPredMap)
     setSettlements(settleMap)
     setLeaderboard((board ?? []) as LeaderboardRow[])
     setMembers((memberData ?? []) as MemberProfile[])
@@ -252,11 +242,9 @@ export function TournamentView() {
     if (e) {
       setError(e.message)
     } else {
-      const entry = { predicted_home: draft.home, predicted_away: draft.away }
-      setPredictions((prev) => ({ ...prev, [matchId]: entry }))
-      setAllPredictions((prev) => ({
+      setPredictions((prev) => ({
         ...prev,
-        [matchId]: { ...(prev[matchId] ?? {}), [profile!.id]: entry },
+        [matchId]: { predicted_home: draft.home, predicted_away: draft.away },
       }))
       setEditing(null)
     }
@@ -433,26 +421,6 @@ export function TournamentView() {
                             </p>
                           </div>
                         </div>
-
-                        {/* All members' predictions */}
-                        {members.length > 0 && (
-                          <div className="border-t border-white/5 pt-2 space-y-1">
-                            <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Predictions</p>
-                            {members.map((member) => {
-                              const mp = allPredictions[m.id]?.[member.id]
-                              return (
-                                <div key={member.id} className="flex items-center justify-between text-xs">
-                                  <span className={member.id === profile?.id ? 'text-gold font-medium' : 'text-gray-400'}>
-                                    {member.display_name.split(' ')[0]}
-                                  </span>
-                                  <span className={mp ? 'text-white font-bold' : 'text-gray-600'}>
-                                    {mp ? `${mp.predicted_home}–${mp.predicted_away}` : '—'}
-                                  </span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
 
                         {/* Prediction area */}
                         <div className="border-t border-white/5 pt-3 mt-auto">

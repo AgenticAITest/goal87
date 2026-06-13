@@ -6,6 +6,7 @@ import { Navbar } from '../components/Navbar'
 import { formatKickoff, formatIDR } from '../lib/fmt'
 import { useAuth } from '../hooks/useAuth'
 import type { Match, MatchStatus, Tournament, LeaderboardRow } from '../types/database'
+import { TEAM_CRESTS } from '../lib/teamCrests'
 
 type FilterTab = 'upcoming' | 'live' | 'finished'
 
@@ -83,6 +84,14 @@ function teamColor(name: string): string {
 }
 
 function TeamBadge({ name }: { name: string }) {
+  const crest = TEAM_CRESTS[name]
+  if (crest) {
+    return (
+      <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden select-none">
+        <img src={crest} alt={name} className="w-10 h-10 object-contain" />
+      </div>
+    )
+  }
   const flag = TEAM_FLAGS[name]
   if (flag) {
     return (

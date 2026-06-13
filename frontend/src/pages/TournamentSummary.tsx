@@ -314,25 +314,25 @@ export function TournamentSummary() {
                 {pendingRows.length > 0 && (
                   <>
                     <tr className="border-t border-white/10">
-                      <td colSpan={2 + players.length} className="py-2 px-4 text-[10px] text-gray-600 uppercase tracking-widest font-bold">
+                      <td colSpan={2 + players.length} className="py-2 px-4 text-[10px] text-gray-400 uppercase tracking-widest font-bold">
                         Upcoming & unsettled
                       </td>
                     </tr>
                     {pendingRows.map((r) => {
                       return (
                         <tr key={r.match.id} className="border-t border-white/5">
-                          <td className="py-2 px-4 text-gray-600 text-xs whitespace-nowrap">
-                            <span className="text-gray-700 text-[10px] mr-1">{toDateLabel(r.match.kickoff_at)}</span>
-                            {r.match.home_team} <span className="text-gray-700">vs</span> {r.match.away_team}
+                          <td className="py-2 px-4 text-gray-400 text-xs whitespace-nowrap">
+                            <span className="text-gray-500 text-[10px] mr-1">{toDateLabel(r.match.kickoff_at)}</span>
+                            {r.match.home_team} <span className="text-gray-500">vs</span> {r.match.away_team}
                           </td>
-                          <td className="py-2 px-3 text-center text-gray-600 text-xs">
+                          <td className="py-2 px-3 text-center text-gray-500 text-xs">
                             {r.match.ft_home != null ? `${r.match.ft_home}–${r.match.ft_away}` : '—'}
                           </td>
                           {players.map((pl) => {
                             const pred = r.preds[pl.id]
                             return (
-                              <td key={pl.id} className="py-2 px-4 text-center text-gray-600 text-xs">
-                                {pred ? `${pred.home}–${pred.away}` : <span className="text-gray-700">—</span>}
+                              <td key={pl.id} className="py-2 px-4 text-center text-gray-400 text-xs">
+                                {pred ? `${pred.home}–${pred.away}` : <span className="text-gray-500">—</span>}
                               </td>
                             )
                           })}

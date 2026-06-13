@@ -87,8 +87,8 @@ function TeamBadge({ name }: { name: string }) {
   const crest = TEAM_CRESTS[name]
   if (crest) {
     return (
-      <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden select-none">
-        <img src={crest} alt={name} className="w-10 h-10 object-contain" />
+      <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center select-none p-1.5">
+        <img src={crest} alt={name} className="w-full h-full object-contain" />
       </div>
     )
   }

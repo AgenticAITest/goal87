@@ -287,13 +287,16 @@ export function Dashboard() {
                 )}
 
                 {/* Actions */}
-                <div className="flex items-center gap-3 border-t border-white/5 pt-3">
-                  <div className="flex items-center gap-1 text-gold text-xs font-bold uppercase tracking-widest group-hover:text-gold-light transition-colors">
-                    Full summary <ChevronRight size={12} />
-                  </div>
+                <div className="flex items-center gap-2 border-t border-white/5 pt-3">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate(`/tournaments/${t.id}/summary`) }}
+                    className="flex items-center gap-1.5 bg-gold/10 hover:bg-gold/20 border border-gold/30 text-gold px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors"
+                  >
+                    Details <ChevronRight size={11} />
+                  </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); navigate(`/tournaments/${t.id}`) }}
-                    className="flex items-center gap-1 text-gray-500 hover:text-white text-xs uppercase tracking-widest transition-colors"
+                    className="flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors"
                   >
                     <ListChecks size={11} /> Predict
                   </button>

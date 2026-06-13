@@ -15,6 +15,7 @@ const FINISHED_STATUSES: MatchStatus[] = ['FINISHED', 'POSTPONED', 'CANCELLED']
 
 interface PredEntry { predicted_home: number; predicted_away: number }
 interface SettleEntry { amount_idr: number; is_winner: boolean; is_void: boolean }
+interface MemberProfile { id: string; display_name: string; balance_idr: number }
 
 const STATUS_STYLES: Record<string, string> = {
   SCHEDULED: 'text-white bg-white/5',
@@ -119,11 +120,13 @@ export function TournamentView() {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
-  const [tournament, setTournament]   = useState<Tournament | null>(null)
-  const [matches, setMatches]         = useState<Match[]>([])
-  const [predictions, setPredictions] = useState<Record<string, PredEntry>>({})
-  const [settlements, setSettlements] = useState<Record<string, SettleEntry>>({})
-  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
+  const [tournament, setTournament]         = useState<Tournament | null>(null)
+  const [matches, setMatches]               = useState<Match[]>([])
+  const [predictions, setPredictions]       = useState<Record<string, PredEntry>>({})
+  const [allPredictions, setAllPredictions] = useState<Record<string, Record<string, PredEntry>>>({})
+  const [settlements, setSettlements]       = useState<Record<string, SettleEntry>>({})
+  const [leaderboard, setLeaderboard]       = useState<LeaderboardRow[]>([])
+  const [members, setMembers]               = useState<MemberProfile[]>([])
 
   const [filter, setFilter]         = useState<FilterTab>('upcoming')
   const [loading, setLoading]       = useState(true)
@@ -184,20 +187,32 @@ export function TournamentView() {
     const matchList = (m ?? []) as Match[]
     const matchIds  = matchList.map((x) => x.id)
 
-    const [{ data: p }, { data: s }, { data: board }] = await Promise.all([
+    const [{ data: allP }, { data: s }, { data: board }, { data: memberData }] = await Promise.all([
       supabase.from('predictions')
-        .select('match_id, predicted_home, predicted_away')
-        .eq('user_id', profile!.id)
+        .select('match_id, predicted_home, predicted_away, user_id')
         .in('match_id', matchIds),
       supabase.from('settlements')
         .select('match_id, amount_idr, is_winner, is_void')
         .eq('user_id', profile!.id)
         .in('match_id', matchIds),
       supabase.rpc('leaderboard', { p_tournament_id: id }),
+      supabase.from('profiles')
+        .select('id, display_name, balance_idr')
+        .eq('status', 'active')
+        .order('display_name'),
     ])
 
+    const allPredMap: Record<string, Record<string, PredEntry>> = {}
+    for (const x of allP ?? []) {
+      if (!allPredMap[x.match_id]) allPredMap[x.match_id] = {}
+      allPredMap[x.match_id][x.user_id] = { predicted_home: x.predicted_home, predicted_away: x.predicted_away }
+    }
+
     const predMap: Record<string, PredEntry> = {}
-    for (const x of p ?? []) predMap[x.match_id] = { predicted_home: x.predicted_home, predicted_away: x.predicted_away }
+    for (const x of allP ?? []) {
+      if (x.user_id === profile!.id)
+        predMap[x.match_id] = { predicted_home: x.predicted_home, predicted_away: x.predicted_away }
+    }
 
     const settleMap: Record<string, SettleEntry> = {}
     for (const x of s ?? []) settleMap[x.match_id] = { amount_idr: x.amount_idr, is_winner: x.is_winner, is_void: x.is_void }
@@ -211,8 +226,10 @@ export function TournamentView() {
     setTournament(t as Tournament)
     setMatches(matchList)
     setPredictions(predMap)
+    setAllPredictions(allPredMap)
     setSettlements(settleMap)
     setLeaderboard((board ?? []) as LeaderboardRow[])
+    setMembers((memberData ?? []) as MemberProfile[])
     setDrafts(initDrafts)
     setLoading(false)
   }
@@ -235,9 +252,11 @@ export function TournamentView() {
     if (e) {
       setError(e.message)
     } else {
-      setPredictions((prev) => ({
+      const entry = { predicted_home: draft.home, predicted_away: draft.away }
+      setPredictions((prev) => ({ ...prev, [matchId]: entry }))
+      setAllPredictions((prev) => ({
         ...prev,
-        [matchId]: { predicted_home: draft.home, predicted_away: draft.away },
+        [matchId]: { ...(prev[matchId] ?? {}), [profile!.id]: entry },
       }))
       setEditing(null)
     }
@@ -414,6 +433,26 @@ export function TournamentView() {
                             </p>
                           </div>
                         </div>
+
+                        {/* All members' predictions */}
+                        {members.length > 0 && (
+                          <div className="border-t border-white/5 pt-2 space-y-1">
+                            <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Predictions</p>
+                            {members.map((member) => {
+                              const mp = allPredictions[m.id]?.[member.id]
+                              return (
+                                <div key={member.id} className="flex items-center justify-between text-xs">
+                                  <span className={member.id === profile?.id ? 'text-gold font-medium' : 'text-gray-400'}>
+                                    {member.display_name.split(' ')[0]}
+                                  </span>
+                                  <span className={mp ? 'text-white font-bold' : 'text-gray-600'}>
+                                    {mp ? `${mp.predicted_home}–${mp.predicted_away}` : '—'}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
 
                         {/* Prediction area */}
                         <div className="border-t border-white/5 pt-3 mt-auto">
@@ -632,38 +671,80 @@ export function TournamentView() {
           </div>
 
           {/* Leaderboard sidebar */}
-          <div className="w-full lg:w-72 shrink-0 space-y-3">
-            <h2 className="text-xs text-gray-400 uppercase tracking-widest font-bold">Leaderboard</h2>
-            {leaderboard.length === 0 ? (
-              <p className="text-gray-600 text-sm">No predictions yet.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {leaderboard.map((row, i) => {
-                  const isMe = row.user_id === profile?.id
-                  return (
-                    <div
-                      key={row.user_id}
-                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-colors ${
-                        isMe ? 'bg-gold/10 border border-gold/20' : 'glass'
-                      }`}
-                    >
-                      <span className={`w-5 text-right text-xs font-bold shrink-0 ${isMe ? 'text-gold' : 'text-gray-600'}`}>
-                        {i + 1}
-                      </span>
-                      <span className={`flex-1 truncate font-medium ${isMe ? 'text-gold' : 'text-white'}`}>
-                        {row.display_name}
-                      </span>
-                      <span className={`text-xs font-bold shrink-0 ${
-                        row.balance_idr > 0 ? 'text-green-400' :
-                        row.balance_idr < 0 ? 'text-red-400' : 'text-gray-500'
-                      }`}>
-                        {row.balance_idr > 0 ? '+' : ''}{formatIDR(row.balance_idr)}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+          <div className="w-full lg:w-72 shrink-0 space-y-6">
+
+            {/* Tournament Leaderboard */}
+            <div className="space-y-3">
+              <h2 className="text-xs text-gray-400 uppercase tracking-widest font-bold">Tournament Leaderboard</h2>
+              {leaderboard.length === 0 ? (
+                <p className="text-gray-600 text-sm">No predictions yet.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {leaderboard.map((row, i) => {
+                    const isMe = row.user_id === profile?.id
+                    return (
+                      <div
+                        key={row.user_id}
+                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-colors ${
+                          isMe ? 'bg-gold/10 border border-gold/20' : 'glass'
+                        }`}
+                      >
+                        <span className={`w-5 text-right text-xs font-bold shrink-0 ${isMe ? 'text-gold' : 'text-gray-600'}`}>
+                          {i + 1}
+                        </span>
+                        <span className={`flex-1 truncate font-medium ${isMe ? 'text-gold' : 'text-white'}`}>
+                          {row.display_name}
+                        </span>
+                        <span className={`text-xs font-bold shrink-0 ${
+                          row.balance_idr > 0 ? 'text-green-400' :
+                          row.balance_idr < 0 ? 'text-red-400' : 'text-gray-500'
+                        }`}>
+                          {row.balance_idr > 0 ? '+' : ''}{formatIDR(row.balance_idr)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Overall Leaderboard */}
+            <div className="space-y-3">
+              <h2 className="text-xs text-gray-400 uppercase tracking-widest font-bold">Overall Leaderboard</h2>
+              {members.length === 0 ? (
+                <p className="text-gray-600 text-sm">No members.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {[...members]
+                    .sort((a, b) => b.balance_idr - a.balance_idr)
+                    .map((member, i) => {
+                      const isMe = member.id === profile?.id
+                      return (
+                        <div
+                          key={member.id}
+                          className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm ${
+                            isMe ? 'bg-gold/10 border border-gold/20' : 'glass'
+                          }`}
+                        >
+                          <span className={`w-5 text-right text-xs font-bold shrink-0 ${isMe ? 'text-gold' : 'text-gray-600'}`}>
+                            {i + 1}
+                          </span>
+                          <span className={`flex-1 truncate font-medium ${isMe ? 'text-gold' : 'text-white'}`}>
+                            {member.display_name}
+                          </span>
+                          <span className={`text-xs font-bold shrink-0 ${
+                            member.balance_idr > 0 ? 'text-green-400' :
+                            member.balance_idr < 0 ? 'text-red-400' : 'text-gray-500'
+                          }`}>
+                            {member.balance_idr > 0 ? '+' : ''}{formatIDR(member.balance_idr)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       </div>

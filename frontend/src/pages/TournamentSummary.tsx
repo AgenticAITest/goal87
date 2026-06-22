@@ -77,26 +77,29 @@ export function TournamentSummary() {
     const playerList = (profs ?? []) as Player[]
     const matchIds   = matchList.map((x) => x.id)
 
-    const [{ data: p }, { data: s }] = await Promise.all([
+    const [{ data: p }, { data: l }] = await Promise.all([
       matchIds.length
         ? supabase.from('predictions').select('user_id,match_id,predicted_home,predicted_away').in('match_id', matchIds)
         : Promise.resolve({ data: [] }),
-      matchIds.length
-        ? supabase.from('settlements').select('user_id,match_id,amount_idr,is_winner,is_void').in('match_id', matchIds)
-        : Promise.resolve({ data: [] }),
+      // Ledger is now the source of truth for settled amounts + opening balances.
+      supabase.from('ledger').select('user_id,match_id,entry_type,amount_idr,score').eq('tournament_id', id).order('seq'),
     ])
 
-    // Index predictions and settlements by match
+    // Index predictions (from predictions table) and settlements (from ledger) by match.
     const predsByMatch:   Record<string, Record<string, { home: number; away: number }>>                         = {}
     const settlesByMatch: Record<string, Record<string, { amount: number; isWinner: boolean; isVoid: boolean }>> = {}
+    const openingByUser:  Record<string, number> = {}
 
     for (const x of p ?? []) {
       if (!predsByMatch[x.match_id]) predsByMatch[x.match_id] = {}
       predsByMatch[x.match_id][x.user_id] = { home: x.predicted_home, away: x.predicted_away }
     }
-    for (const x of s ?? []) {
+    // Iterated in seq order: a later settlement (e.g. after a recalc) overwrites the earlier one.
+    for (const x of l ?? []) {
+      if (x.entry_type === 'opening') { openingByUser[x.user_id] = x.amount_idr; continue }
+      if (x.entry_type !== 'settlement' || !x.match_id) continue
       if (!settlesByMatch[x.match_id]) settlesByMatch[x.match_id] = {}
-      settlesByMatch[x.match_id][x.user_id] = { amount: x.amount_idr, isWinner: x.is_winner, isVoid: x.is_void }
+      settlesByMatch[x.match_id][x.user_id] = { amount: x.amount_idr, isWinner: x.amount_idr > 0, isVoid: x.score === 'void' }
     }
 
     const allRows: MatchSummary[] = matchList.map((match) => ({
@@ -118,10 +121,11 @@ export function TournamentSummary() {
     }
 
     // Build groups with running totals before each.
-    // Seed each player's running total from their admin-set balance_idr so
+    // Seed each player's running total from their ledger opening entry so
     // "Running Total · Start" shows their balance before any match in this tournament.
+    // (profiles.balance_idr is now the *ending* total, not the opening.)
     const running: Record<string, number> = {}
-    for (const pl of playerList) running[pl.id] = pl.balance_idr
+    for (const pl of playerList) running[pl.id] = openingByUser[pl.id] ?? 0
 
     const builtGroups: DateGroup[] = []
     for (const [label, rows] of groupMap) {

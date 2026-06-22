@@ -200,10 +200,12 @@ export function TournamentView() {
         .select('match_id, predicted_home, predicted_away')
         .eq('user_id', profile!.id)
         .in('match_id', matchIds),
-      supabase.from('settlements')
-        .select('match_id, amount_idr, is_winner, is_void')
+      supabase.from('ledger')
+        .select('match_id, amount_idr, score, entry_type, seq')
         .eq('user_id', profile!.id)
-        .in('match_id', matchIds),
+        .eq('tournament_id', id)
+        .eq('entry_type', 'settlement')
+        .order('seq'),
       supabase.rpc('leaderboard', { p_tournament_id: id }),
       supabase.from('profiles')
         .select('id, display_name, balance_idr')
@@ -214,8 +216,13 @@ export function TournamentView() {
     const predMap: Record<string, PredEntry> = {}
     for (const x of p ?? []) predMap[x.match_id] = { predicted_home: x.predicted_home, predicted_away: x.predicted_away }
 
+    // Settlements now come from the ledger (corrected). Iterated in seq order so a
+    // later entry (e.g. after a recalc) wins. is_winner/is_void derived from the row.
     const settleMap: Record<string, SettleEntry> = {}
-    for (const x of s ?? []) settleMap[x.match_id] = { amount_idr: x.amount_idr, is_winner: x.is_winner, is_void: x.is_void }
+    for (const x of s ?? []) {
+      if (!x.match_id) continue
+      settleMap[x.match_id] = { amount_idr: x.amount_idr, is_winner: x.amount_idr > 0, is_void: x.score === 'void' }
+    }
 
     const initDrafts: Record<string, { home: number; away: number }> = {}
     for (const mx of matchList) {

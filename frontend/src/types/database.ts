@@ -70,6 +70,22 @@ export interface LeaderboardRow {
   first_correct_at: string | null
 }
 
+export interface LedgerRow {
+  seq: number
+  user_id: string
+  tournament_id: string
+  match_id: string | null
+  entry_type: 'opening' | 'settlement' | 'reversal'
+  prediction: string | null
+  score: string | null
+  amount_idr: number
+  balance_before: number
+  balance_after: number
+  occurred_at: string
+  note: string | null
+  created_at: string
+}
+
 export interface Settlement {
   id: string
   match_id: string

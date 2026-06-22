@@ -88,10 +88,11 @@ export function Dashboard() {
         let settlementsByMatch: Record<string, Record<string, number>> = {}
         if (lastMatches.length > 0) {
           const { data: settleData } = await supabase
-            .from('settlements')
+            .from('ledger')
             .select('user_id, match_id, amount_idr')
+            .eq('entry_type', 'settlement')
             .in('match_id', lastMatches.map((m) => m.id))
-            .eq('is_void', false)
+            .order('seq')
 
           for (const s of settleData ?? []) {
             if (!settlementsByMatch[s.match_id]) settlementsByMatch[s.match_id] = {}
@@ -162,7 +163,7 @@ export function Dashboard() {
           <p className="text-gray-500 text-sm">No open tournaments right now.</p>
         ) : (
           <div className="space-y-4">
-            {cards.map(({ tournament: t, leaderboard, myBalance, myRank, lastMatches, settlementsByMatch }) => (
+            {cards.map(({ tournament: t, myBalance, myRank, lastMatches, settlementsByMatch }) => (
               <div
                 key={t.id}
                 onClick={() => navigate(`/tournaments/${t.id}/summary`)}
@@ -219,11 +220,12 @@ export function Dashboard() {
                             Start
                           </td>
                           {players.map((pl) => {
-                            const tournamentPL = leaderboard.find((r) => r.user_id === pl.id)?.balance_idr ?? 0
+                            // balance_idr is now the stored total; the start balance is
+                            // that total minus the last 3 matches' settlements.
                             const last3PL = lastMatches.reduce(
                               (sum, m) => sum + (settlementsByMatch[m.id]?.[pl.id] ?? 0), 0
                             )
-                            const startBal = pl.balance_idr + tournamentPL - last3PL
+                            const startBal = pl.balance_idr - last3PL
                             return (
                               <td key={pl.id} className="text-center py-1.5 px-3 text-gray-400 whitespace-nowrap">
                                 {startBal !== 0 ? formatIDR(startBal) : <span className="text-gray-600">—</span>}
@@ -269,12 +271,11 @@ export function Dashboard() {
                             Balance
                           </td>
                           {players.map((pl) => {
-                            const tournamentPL = leaderboard.find((r) => r.user_id === pl.id)?.balance_idr ?? 0
-                            const currentBal = pl.balance_idr + tournamentPL
+                            const currentBal = pl.balance_idr   // stored total
                             return (
                               <td
                                 key={pl.id}
-                                className={`text-center py-2 px-3 font-bold text-sm whitespace-nowrap ${balanceColor(currentBal, pl.balance_idr)}`}
+                                className={`text-center py-2 px-3 font-bold text-sm whitespace-nowrap ${balanceColor(currentBal, 0)}`}
                               >
                                 {formatIDR(currentBal)}
                               </td>

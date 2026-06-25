@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Frontend (`frontend/`)
 ```bash
 npm run dev      # Vite dev server on :5173
-npm run build    # tsc + vite build
+npm run build    # tsc -b && vite build
 npm run preview  # Preview production build
 ```
 
@@ -45,8 +45,10 @@ Run `supabase/migrations/*.sql` files in filename order via the Supabase dashboa
 3. Active user submits predictions on open matches (locked at kickoff).
 4. Worker polls football-data.org every 60s, updates `matches` table scores/statuses.
 5. When a match reaches `FINISHED`, worker calls the `settle_match()` Postgres RPC.
-6. `settle_match()` calculates winners (exact score predictors split the loser pot), writes `settlements` rows.
+6. `settle_match()` calculates winners (exact-score predictors split the loser pot), writes a `settlements` row per player, appends a `ledger` row, and updates the stored `profiles.balance_idr` — all in one pass.
 7. Supabase Realtime pushes updates to frontend; user sees balance/leaderboard update live.
+
+**Balances are stored, not calculated.** The `ledger` table is the live source of truth; `profiles.balance_idr` is a running total maintained inside the DB functions. The `leaderboard()` function reads the ledger (active members only). `settlements` rows are kept as the raw per-match log but are no longer authoritative for balances.
 
 ### Three-tier auth routing (`frontend/src/components/ProtectedRoute.tsx`)
 - Any authenticated user: `<ProtectedRoute />`
@@ -61,10 +63,13 @@ Single Express app with a `startPoller()` loop:
 - Rate-limits to respect football-data.org free tier (10 req/min): 7-second sleep between tournaments.
 - Admin endpoints: `GET /health`, `GET /competitions`, `POST /pull-fixtures`, `POST /poll-now` — all require Supabase JWT + `is_admin` check.
 
-### Database functions (`supabase/migrations/20260522000003_functions.sql`)
-- `settle_match(match_id)` — Locks match row, identifies exact-score winners, calculates pot split in IDR, inserts `settlements`, marks match settled. Idempotent (skips already-settled matches).
-- `void_match(match_id)` — Voids all settlements for a match (admin action).
-- Leaderboard query logic lives in a Postgres function, not in frontend JS.
+### Database functions
+The current authoritative definitions live in `supabase/migrations/20260622000002_ledger_live.sql` (later `CREATE OR REPLACE` overrides the originals in `20260522000003_functions.sql` — read the ledger migration, not the original, for live behavior). All run `SECURITY DEFINER` and take an advisory xact lock on the match.
+- `settle_match(match_id)` — Identifies exact-score winners, splits the loser pot (integer division in IDR), inserts `settlements`, appends `ledger` rows, updates `profiles.balance_idr`, marks match settled. Idempotent (skips matches with `settled_at` set).
+- `recalculate_match(match_id, admin_id)` — Reverses the current settlement's balance + ledger effect, voids, then re-runs `settle_match` (admin "re-settle" action).
+- `void_match(match_id)` — Writes zero-amount voided settlements + a ledger trail; leaves balances unchanged (admin action).
+- `leaderboard(tournament_id)` — Tournament P&L summed from the ledger, filtered to active members. Leaderboard logic lives here, not in frontend JS.
+- `admin_set_balance(target_id, new_balance, note)` — Manual balance override after offline cash settlement; logs to `balance_ledger`.
 
 ### Key tables
 | Table | Purpose |
@@ -73,8 +78,13 @@ Single Express app with a `startPoller()` loop:
 | `tournaments` | Betting events linked to a football competition (e.g., 'PL') and season |
 | `matches` | Fixtures with `api_match_id` (unique), kickoff time, scores, settlement state |
 | `predictions` | One row per `(user_id, match_id)`; only visible to others after kickoff |
-| `settlements` | Signed `amount_idr` per match per player; only DB functions may insert |
+| `settlements` | Signed `amount_idr` per match per player; raw per-match log, only DB functions may insert |
+| `ledger` | Live source of truth for balances; one row per balance-changing event with `balance_before`/`balance_after` |
+| `balance_ledger` | Audit trail for manual admin balance overrides (`admin_set_balance`) |
+| `highlight_clips` | Admin-curated highlight videos surfaced on the dashboard |
 | `audit_log` | Immutable admin action log (before/after JSONB); only DB functions may write |
+
+`profiles.balance_idr` holds the stored running balance (maintained by DB functions, not computed on read).
 
 ### Frontend structure
 ```
@@ -83,7 +93,8 @@ frontend/src/
 ├── hooks/useAuth.ts     # Auth state, profile, sign-out
 ├── lib/
 │   ├── supabase.ts      # Supabase client singleton
-│   └── fmt.ts           # formatIDR() currency formatter
+│   ├── fmt.ts           # formatIDR() currency formatter
+│   └── teamCrests.ts    # Maps team names → baked-in WC2026 crest assets
 ├── pages/
 │   ├── Dashboard.tsx    # Main user page with live match list
 │   ├── TournamentView.tsx

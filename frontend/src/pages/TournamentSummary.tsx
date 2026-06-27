@@ -199,18 +199,19 @@ export function TournamentSummary() {
 
         {/* Scrollable table */}
         {(groups.length > 0 || pendingRows.length > 0) && (
-          <div className="overflow-x-auto rounded-2xl glass">
+          <div className="overflow-auto rounded-2xl glass max-h-[70vh]">
             <table className="w-full text-sm border-collapse min-w-max">
 
-              {/* Column headers */}
+              {/* Column headers — sticky to the top of the table's own scroll
+                  area so player names stay visible while scrolling the match list */}
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="text-left text-gray-500 text-[10px] uppercase tracking-widest font-normal py-3 px-4 w-48 whitespace-nowrap">Match</th>
-                  <th className="text-center text-gray-500 text-[10px] uppercase tracking-widest font-normal py-3 px-3 w-16">Score</th>
+                  <th className="sticky top-0 z-30 bg-charcoal text-left text-gray-500 text-[10px] uppercase tracking-widest font-normal py-3 px-4 w-48 whitespace-nowrap">Match</th>
+                  <th className="sticky top-0 z-30 bg-charcoal text-center text-gray-500 text-[10px] uppercase tracking-widest font-normal py-3 px-3 w-16">Score</th>
                   {players.map((pl) => (
                     <th
                       key={pl.id}
-                      className={`text-center text-[10px] uppercase tracking-widest font-bold py-3 px-4 min-w-28 ${pl.id === profile?.id ? 'text-gold' : 'text-gray-300'}`}
+                      className={`sticky top-0 z-30 bg-charcoal text-center text-[10px] uppercase tracking-widest font-bold py-3 px-4 min-w-28 ${pl.id === profile?.id ? 'text-gold' : 'text-gray-300'}`}
                     >
                       {pl.display_name.split(' ')[0]}
                     </th>

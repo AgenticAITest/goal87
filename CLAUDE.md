@@ -86,6 +86,14 @@ The current authoritative definitions live in `supabase/migrations/2026062200000
 
 `profiles.balance_idr` holds the stored running balance (maintained by DB functions, not computed on read).
 
+### Row-Level Security
+`predictions`, `settlements`, and `ledger` had RLS **disabled** for a stretch (migrations `…0008_relax_rls` and the ledger rebuild), which let the public anon key — baked into the frontend bundle — read them without logging in. `20260625000001_rls_close_public_read.sql` re-closes that hole:
+- `predictions` / `ledger`: any **active** member may `SELECT` all rows (the Details/Summary pages intentionally show everyone's picks and running totals); the anonymous public is blocked.
+- `settlements`: RLS back on; self-read + admin-read-all only. The frontend reads only its own settlements; cross-player amounts come from `ledger`.
+- The worker (service key) and DB functions (`SECURITY DEFINER`) bypass RLS, so they're unaffected.
+
+When adding a query against these tables, assume the caller must be an authenticated active member — `is_active()` gates reads.
+
 ### Frontend structure
 ```
 frontend/src/

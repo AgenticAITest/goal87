@@ -126,7 +126,7 @@ function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms))
 }
 
-interface SyncResult { settled: number; voided: number; updated: number }
+interface SyncResult { settled: number; resettled: number; voided: number; updated: number }
 
 async function syncTournament(t: {
   id: string
@@ -159,6 +159,20 @@ async function syncTournament(t: {
     last_polled_at: polledAt,
   }))
 
+  // Capture the scores of already-settled matches BEFORE the upsert overwrites
+  // them, so a later score correction from the provider (e.g. a disallowed goal)
+  // can be detected below and re-settled.
+  const apiIds = rows.map((r) => r.api_match_id)
+  const { data: priorSettled } = apiIds.length
+    ? await supabase
+        .from('matches')
+        .select('id, api_match_id, ft_home, ft_away')
+        .eq('tournament_id', t.id)
+        .not('settled_at', 'is', null)
+        .in('api_match_id', apiIds)
+    : { data: [] as { id: string; api_match_id: number; ft_home: number | null; ft_away: number | null }[] }
+  const priorScore = new Map((priorSettled ?? []).map((m) => [m.api_match_id, m]))
+
   if (rows.length > 0) {
     const { error: upsertErr } = await supabase
       .from('matches')
@@ -186,6 +200,26 @@ async function syncTournament(t: {
     else { settled++; console.log(`[poller] settled ${m.id}`) }
   }
 
+  // Re-settle any ALREADY-settled match whose score changed since we settled it.
+  // football-data.org occasionally pushes a FINISHED status with a score it later
+  // corrects (e.g. a VAR-disallowed goal). settle_match is idempotent and won't
+  // re-run on a settled match, so without this a correction would update the
+  // stored score but leave the (now wrong) settlement in place. recalculate_match
+  // re-runs settlement on the corrected score and keeps the ledger clean.
+  let resettled = 0
+  for (const r of rows) {
+    if (r.status !== 'FINISHED' || r.ft_home == null || r.ft_away == null) continue
+    const prior = priorScore.get(r.api_match_id)
+    if (!prior) continue                                   // wasn't settled before
+    if (prior.ft_home === r.ft_home && prior.ft_away === r.ft_away) continue  // unchanged
+    const { error } = await supabase.rpc('recalculate_match', { p_match_id: prior.id, p_admin_id: null })
+    if (error) console.error(`[poller] recalculate_match(${prior.id}) on score change: ${error.message}`)
+    else {
+      resettled++
+      console.log(`[poller] re-settled ${prior.id} after score change ${prior.ft_home}-${prior.ft_away} -> ${r.ft_home}-${r.ft_away}`)
+    }
+  }
+
   // Void POSTPONED/CANCELLED matches that are not yet settled
   const { data: toVoid, error: voidQueryErr } = await supabase
     .from('matches')
@@ -203,7 +237,7 @@ async function syncTournament(t: {
     else { voided++; console.log(`[poller] voided ${m.id}`) }
   }
 
-  return { settled, voided, updated: rows.length }
+  return { settled, resettled, voided, updated: rows.length }
 }
 
 async function pollScores() {
@@ -219,8 +253,8 @@ async function pollScores() {
   for (let i = 0; i < tournaments.length; i++) {
     const t = tournaments[i] as { id: string; api_competition_id: string; api_season: number }
     try {
-      const { settled, voided, updated } = await syncTournament(t)
-      console.log(`[poller] ${t.api_competition_id}/${t.api_season}: ${updated} matches synced, settled=${settled}, voided=${voided}`)
+      const { settled, resettled, voided, updated } = await syncTournament(t)
+      console.log(`[poller] ${t.api_competition_id}/${t.api_season}: ${updated} matches synced, settled=${settled}, resettled=${resettled}, voided=${voided}`)
     } catch (err: unknown) {
       const msg = axios.isAxiosError(err)
         ? `${err.response?.status} ${err.response?.data?.message ?? err.message}`

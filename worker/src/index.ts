@@ -94,8 +94,8 @@ app.post('/pull-fixtures', async (req, res) => {
     away_team:    m.awayTeam?.name ?? m.awayTeam?.shortName ?? 'TBD',
     kickoff_at:   m.utcDate,
     status:       normStatus(m.status),
-    ft_home:      m.score?.fullTime?.home ?? null,
-    ft_away:      m.score?.fullTime?.away ?? null,
+    ft_home:      reg(m.score, 'home'),
+    ft_away:      reg(m.score, 'away'),
   }))
 
   const { error: upsertErr } = await supabase
@@ -154,8 +154,8 @@ async function syncTournament(t: {
     away_team:      m.awayTeam?.name ?? m.awayTeam?.shortName ?? 'TBD',
     kickoff_at:     m.utcDate,
     status:         normStatus(m.status),
-    ft_home:        m.score?.fullTime?.home ?? null,
-    ft_away:        m.score?.fullTime?.away ?? null,
+    ft_home:        reg(m.score, 'home'),
+    ft_away:        reg(m.score, 'away'),
     last_polled_at: polledAt,
   }))
 
@@ -297,8 +297,19 @@ interface FdMatch {
   homeTeam: { name?: string; shortName?: string }
   awayTeam: { name?: string; shortName?: string }
   score: {
-    fullTime: { home: number | null; away: number | null }
+    fullTime:    { home: number | null; away: number | null }
+    // Present only when a knockout match went to extra time / penalties.
+    // Holds the score after 90 minutes; fullTime would include ET + shootout.
+    regularTime?: { home: number | null; away: number | null }
   }
+}
+
+// Settlement is based on the first 2x45 (90 minutes) only. For knockout matches
+// the API exposes that as `regularTime`; `fullTime` would add extra-time and
+// shootout goals. Group-stage matches have no `regularTime`, where `fullTime`
+// already is the 90-minute result — so prefer regularTime, fall back to fullTime.
+function reg(score: FdMatch['score'], side: 'home' | 'away'): number | null {
+  return score?.regularTime?.[side] ?? score?.fullTime?.[side] ?? null
 }
 
 function normStatus(fdStatus: string): string {

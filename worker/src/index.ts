@@ -128,6 +128,18 @@ function sleep(ms: number) {
 
 interface SyncResult { settled: number; resettled: number; voided: number; updated: number }
 
+// Pre-upsert snapshot of a match, used for settlement debounce + drift detection.
+interface PriorRow {
+  id: string
+  api_match_id: number
+  status: string
+  ft_home: number | null
+  ft_away: number | null
+  settled_at: string | null
+  settled_home: number | null
+  settled_away: number | null
+}
+
 async function syncTournament(t: {
   id: string
   api_competition_id: string
@@ -159,19 +171,24 @@ async function syncTournament(t: {
     last_polled_at: polledAt,
   }))
 
-  // Capture the scores of already-settled matches BEFORE the upsert overwrites
-  // them, so a later score correction from the provider (e.g. a disallowed goal)
-  // can be detected below and re-settled.
+  // Snapshot each in-window match's pre-upsert state so we can, below:
+  //   (a) DEBOUNCE — require a FINISHED score to repeat across two consecutive
+  //       polls before settling, so a transient provider snapshot (e.g. a goal
+  //       not yet removed after a VAR disallow) never gets settled; and
+  //   (b) SELF-HEAL — re-settle an already-settled match whenever the live
+  //       score drifts from the score it was settled on (matches.settled_*).
+  // (b) compares settled-score vs live-score every poll, so it re-fires until
+  // the two agree — unlike a one-shot poll-to-poll diff, which a single missed
+  // or failed cycle (or a correction arriving in a non-FINISHED poll) defeats.
   const apiIds = rows.map((r) => r.api_match_id)
-  const { data: priorSettled } = apiIds.length
+  const { data: priorRows } = apiIds.length
     ? await supabase
         .from('matches')
-        .select('id, api_match_id, ft_home, ft_away')
+        .select('id, api_match_id, status, ft_home, ft_away, settled_at, settled_home, settled_away')
         .eq('tournament_id', t.id)
-        .not('settled_at', 'is', null)
         .in('api_match_id', apiIds)
-    : { data: [] as { id: string; api_match_id: number; ft_home: number | null; ft_away: number | null }[] }
-  const priorScore = new Map((priorSettled ?? []).map((m) => [m.api_match_id, m]))
+    : { data: [] as PriorRow[] }
+  const prior = new Map((priorRows ?? []).map((m) => [m.api_match_id, m as PriorRow]))
 
   if (rows.length > 0) {
     const { error: upsertErr } = await supabase
@@ -180,9 +197,34 @@ async function syncTournament(t: {
     if (upsertErr) throw new Error(`upsert: ${upsertErr.message}`)
   }
 
-  // Settle FINISHED matches that have scores and are not yet settled.
-  // Runs regardless of the API window — catches matches settled outside the date range.
-  const { data: toSettle, error: settleQueryErr } = await supabase
+  let settled = 0
+  let resettled = 0
+  for (const r of rows) {
+    if (r.status !== 'FINISHED' || r.ft_home == null || r.ft_away == null) continue
+    const p = prior.get(r.api_match_id)
+    if (!p) continue                                       // first sighting — wait a cycle
+    // Debounce: the same FINISHED score must appear on two consecutive polls.
+    const confirmed = p.status === 'FINISHED' && p.ft_home === r.ft_home && p.ft_away === r.ft_away
+    if (!confirmed) continue
+    if (p.settled_at == null) {
+      const { error } = await supabase.rpc('settle_match', { p_match_id: p.id })
+      if (error) console.error(`[poller] settle_match(${p.id}): ${error.message}`)
+      else { settled++; console.log(`[poller] settled ${p.id} on ${r.ft_home}-${r.ft_away}`) }
+    } else if (p.settled_home !== r.ft_home || p.settled_away !== r.ft_away) {
+      // Live score no longer matches the score this match was settled on.
+      const { error } = await supabase.rpc('recalculate_match', { p_match_id: p.id, p_admin_id: null })
+      if (error) console.error(`[poller] recalculate_match(${p.id}) on score drift: ${error.message}`)
+      else {
+        resettled++
+        console.log(`[poller] re-settled ${p.id} ${p.settled_home}-${p.settled_away} -> ${r.ft_home}-${r.ft_away}`)
+      }
+    }
+  }
+
+  // Fallback: settle FINISHED, unsettled matches OUTSIDE the current API window
+  // (e.g. the worker was down across the match). These are long-final, so no
+  // debounce is needed; in-window matches are handled by the loop above.
+  const staleQuery = supabase
     .from('matches')
     .select('id')
     .eq('tournament_id', t.id)
@@ -190,34 +232,14 @@ async function syncTournament(t: {
     .is('settled_at', null)
     .not('ft_home', 'is', null)
     .not('ft_away', 'is', null)
-
-  if (settleQueryErr) throw new Error(`settle query: ${settleQueryErr.message}`)
-
-  let settled = 0
-  for (const m of toSettle ?? []) {
+  // Exclude matches handled by the debounced loop above (those in the API window).
+  if (apiIds.length) staleQuery.not('api_match_id', 'in', `(${apiIds.join(',')})`)
+  const { data: stale, error: staleErr } = await staleQuery
+  if (staleErr) throw new Error(`settle query: ${staleErr.message}`)
+  for (const m of stale ?? []) {
     const { error } = await supabase.rpc('settle_match', { p_match_id: m.id })
     if (error) console.error(`[poller] settle_match(${m.id}): ${error.message}`)
-    else { settled++; console.log(`[poller] settled ${m.id}`) }
-  }
-
-  // Re-settle any ALREADY-settled match whose score changed since we settled it.
-  // football-data.org occasionally pushes a FINISHED status with a score it later
-  // corrects (e.g. a VAR-disallowed goal). settle_match is idempotent and won't
-  // re-run on a settled match, so without this a correction would update the
-  // stored score but leave the (now wrong) settlement in place. recalculate_match
-  // re-runs settlement on the corrected score and keeps the ledger clean.
-  let resettled = 0
-  for (const r of rows) {
-    if (r.status !== 'FINISHED' || r.ft_home == null || r.ft_away == null) continue
-    const prior = priorScore.get(r.api_match_id)
-    if (!prior) continue                                   // wasn't settled before
-    if (prior.ft_home === r.ft_home && prior.ft_away === r.ft_away) continue  // unchanged
-    const { error } = await supabase.rpc('recalculate_match', { p_match_id: prior.id, p_admin_id: null })
-    if (error) console.error(`[poller] recalculate_match(${prior.id}) on score change: ${error.message}`)
-    else {
-      resettled++
-      console.log(`[poller] re-settled ${prior.id} after score change ${prior.ft_home}-${prior.ft_away} -> ${r.ft_home}-${r.ft_away}`)
-    }
+    else { settled++; console.log(`[poller] settled (out-of-window) ${m.id}`) }
   }
 
   // Void POSTPONED/CANCELLED matches that are not yet settled
